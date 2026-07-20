@@ -25,7 +25,8 @@ export class RoomsService {
   ) {}
 
   private inviteUrl(code: string): string {
-    const base = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const raw = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const base = raw.split(',')[0]?.trim() || 'http://localhost:3000';
     return `${base.replace(/\/$/, '')}/room/${code}`;
   }
 

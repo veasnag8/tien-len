@@ -2,17 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, Suspense, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
 
 function AuthForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const nextPath = params.get('next') || '/play';
   const setUser = useAuthStore((s) => s.setUser);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
@@ -22,6 +22,18 @@ function AuthForm() {
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  if (LITE_MODE) {
+    return null;
+  }
+
+  const nextPath = params.get('next') || '/play';
 
   function goNext() {
     router.push(nextPath.startsWith('/') ? nextPath : '/play');

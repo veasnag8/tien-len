@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useGameSocket } from '@/lib/use-game-socket';
 import { useGameStore } from '@/lib/game-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 export default function CreateRoomPage() {
@@ -20,7 +21,13 @@ export default function CreateRoomPage() {
   const [allowFive, setAllowFive] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!LITE_MODE && !loading && !user) {
       router.replace('/auth');
     }
   }, [loading, router, user]);
@@ -30,6 +37,10 @@ export default function CreateRoomPage() {
       router.push(`/room/${room.code}`);
     }
   }, [room, router]);
+
+  if (LITE_MODE) {
+    return null;
+  }
 
   if (loading || !user) {
     return <p className="p-10 text-center">Loading…</p>;
@@ -53,11 +64,7 @@ export default function CreateRoomPage() {
           ))}
         </div>
         <label className="mb-6 flex items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            checked={allowFive}
-            onChange={(e) => setAllowFive(e.target.checked)}
-          />
+          <input type="checkbox" checked={allowFive} onChange={(e) => setAllowFive(e.target.checked)} />
           Allow five consecutive pairs
         </label>
         <button

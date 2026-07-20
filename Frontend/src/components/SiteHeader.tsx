@@ -1,22 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAuthStore } from '@/lib/auth-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 export function SiteHeader() {
-  const pathname = usePathname();
-  const user = useAuthStore((s) => s.user);
   const locale = useSettingsStore((s) => s.locale);
   const setLocale = useSettingsStore((s) => s.setLocale);
   const dict = t(locale);
-
-  const inGame =
-    pathname.startsWith('/room/') &&
-    pathname !== '/room/create' &&
-    pathname !== '/room/join';
 
   return (
     <header
@@ -46,34 +38,21 @@ export function SiteHeader() {
             </button>
           </div>
 
-          <div className="hidden items-center gap-2 md:flex">
-            <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/play">
-              {dict.play}
-            </Link>
-            <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/leaderboard">
-              {dict.leaderboard}
-            </Link>
-            <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/settings">
-              {dict.settings}
-            </Link>
-            {user ? (
-              <Link className="btn-primary !min-h-[40px] !px-3 !py-2 !text-sm" href="/profile">
-                {user.nickname}
+          {!LITE_MODE && (
+            <div className="hidden items-center gap-2 md:flex">
+              <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/play">
+                {dict.play}
               </Link>
-            ) : (
+              <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/leaderboard">
+                {dict.leaderboard}
+              </Link>
+              <Link className="btn-secondary !min-h-[40px] !px-3 !py-2 !text-sm" href="/settings">
+                {dict.settings}
+              </Link>
               <Link className="btn-primary !min-h-[40px] !px-3 !py-2 !text-sm" href="/auth">
                 {dict.login}
               </Link>
-            )}
-          </div>
-
-          {!inGame && (
-            <Link
-              className="btn-primary !min-h-[36px] !rounded-xl !px-3 !py-1.5 !text-xs md:hidden"
-              href={user ? '/profile' : '/auth'}
-            >
-              {user ? user.nickname.slice(0, 8) : dict.login}
-            </Link>
+            </div>
           )}
         </nav>
       </div>

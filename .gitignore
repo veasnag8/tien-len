@@ -50,7 +50,7 @@ Assets/generated/
 Frontend/public/uploads/
 *.qr.png
 
-# Misc
+nginx/ssl/
 *.pem
 .turbo/
 .cache/

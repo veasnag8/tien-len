@@ -70,6 +70,9 @@ const dictionaries = {
     online: 'Online',
     offline: 'Offline',
     rankings: 'Rankings',
+    liteTagline: 'Enter your name and play with friends — no login needed.',
+    startPlay: 'Start playing',
+    yourName: 'Your name',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -140,6 +143,9 @@ const dictionaries = {
     online: 'អនឡាញ',
     offline: 'ក្រៅបណ្តាញ',
     rankings: 'ចំណាត់ថ្នាក់',
+    liteTagline: 'បញ្ចូលឈ្មោះរួចលេងជាមួយមិត្តភក្តិ — មិនចាំបាច់ចូលគណនី។',
+    startPlay: 'ចាប់ផ្តើមលេង',
+    yourName: 'ឈ្មោះរបស់អ្នក',
   },
 } as const;
 

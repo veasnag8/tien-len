@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: tienlen
-      POSTGRES_PASSWORD: tienlen
-      POSTGRES_DB: tienlen
+      POSTGRES_USER: ${POSTGRES_USER:-tienlen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tienlen}
+      POSTGRES_DB: ${POSTGRES_DB:-tienlen}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -37,9 +37,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://tienlen:tienlen@postgres:5432/tienlen?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tienlen}:${POSTGRES_PASSWORD:-tienlen}@postgres:5432/${POSTGRES_DB:-tienlen}?schema=public
       REDIS_URL: redis://redis:6379
-      FRONTEND_URL: http://localhost
+      FRONTEND_URL: ${FRONTEND_URL:-${PUBLIC_URL:-http://localhost:3000}}
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,8 +53,8 @@ services:
       context: .
       dockerfile: Frontend/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost/api
-        NEXT_PUBLIC_WS_URL: http://localhost
+        NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}/api
+        NEXT_PUBLIC_WS_URL: ${PUBLIC_URL:-http://localhost}
     restart: unless-stopped
     depends_on:
       - backend

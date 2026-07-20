@@ -15,6 +15,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { RoomsService } from '../rooms/rooms.service';
+import { isLiteMode } from '../config/lite';
 
 const POINTS_BY_PLACEMENT: Record<number, number[]> = {
   2: [10, 0],
@@ -63,13 +64,15 @@ export class GameService {
     await this.saveState(state);
     await this.rooms.setStatus(roomId, RoomStatus.playing);
 
-    await this.prisma.game.create({
-      data: {
-        roomId,
-        roundNumber: state.roundNumber,
-        stateJson: toPublicState(state) as object,
-      },
-    });
+    if (!isLiteMode()) {
+      await this.prisma.game.create({
+        data: {
+          roomId,
+          roundNumber: state.roundNumber,
+          stateJson: toPublicState(state) as object,
+        },
+      });
+    }
 
     return this.snapshot(state);
   }
@@ -148,6 +151,9 @@ export class GameService {
 
   private async finalizeGame(state: InternalGameState): Promise<void> {
     await this.rooms.setStatus(state.roomId, RoomStatus.finished);
+    if (isLiteMode()) {
+      return;
+    }
     const pointsTable = POINTS_BY_PLACEMENT[state.playerCount] ?? [0, 0, 0, 0];
 
     const game = await this.prisma.game.findFirst({

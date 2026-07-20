@@ -37,7 +37,14 @@ App: http://localhost:3000
 
 ```bash
 cp .env.example .env
+# Edit .env — set JWT_SECRET and PUBLIC_URL for production
 docker compose up -d --build
+```
+
+Production (VPS): see **[Docs/DEPLOY.md](Docs/DEPLOY.md)**.
+
+```bash
+npm run docker:prod
 ```
 
 ## Security model

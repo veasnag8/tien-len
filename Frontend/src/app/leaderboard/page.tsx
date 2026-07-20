@@ -1,18 +1,27 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { LeaderboardPeriod } from '@tien-len/shared';
 import { api } from '@/lib/api';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'all_time'];
 
 export default function LeaderboardPage() {
+  const router = useRouter();
   const [period, setPeriod] = useState<LeaderboardPeriod>('all_time');
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
+
+  useEffect(() => {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
 
   const labels: Record<LeaderboardPeriod, string> = {
     daily: dict.daily,
@@ -24,7 +33,12 @@ export default function LeaderboardPage() {
   const query = useQuery({
     queryKey: ['leaderboard', period],
     queryFn: () => api.leaderboard(period),
+    enabled: !LITE_MODE,
   });
+
+  if (LITE_MODE) {
+    return null;
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">

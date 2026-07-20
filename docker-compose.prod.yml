@@ -1,0 +1,39 @@
+# Production overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Set PUBLIC_URL and secrets in .env before starting.
+
+services:
+  postgres:
+    ports: []
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tienlen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tienlen}
+
+  redis:
+    ports: []
+
+  backend:
+    ports: []
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tienlen}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tienlen}?schema=public
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: ${FRONTEND_URL:-${PUBLIC_URL:-http://localhost}}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+
+  frontend:
+    ports: []
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}/api
+        NEXT_PUBLIC_WS_URL: ${PUBLIC_URL:-http://localhost}
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro

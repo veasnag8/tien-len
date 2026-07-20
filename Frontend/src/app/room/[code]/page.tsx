@@ -11,6 +11,8 @@ import { api } from '@/lib/api';
 import { RoomChat } from '@/components/RoomChat';
 import { MobileChatSheet } from '@/components/MobileChatSheet';
 import { GameTable } from '@/components/GameTable';
+import { LITE_MODE } from '@/lib/config';
+import { ensureGuestSession, getSavedPlayerName } from '@/lib/guest-session';
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -18,7 +20,6 @@ export default function RoomPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
-  const setUser = useAuthStore((s) => s.setUser);
   const room = useGameStore((s) => s.room);
   const qrDataUrl = useGameStore((s) => s.qrDataUrl);
   const game = useGameStore((s) => s.game);
@@ -63,10 +64,26 @@ export default function RoomPage() {
   }, [user?.nickname]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!LITE_MODE && !loading && !user) {
       router.replace(`/auth?next=${encodeURIComponent(`/room/${code ?? ''}`)}`);
     }
   }, [code, loading, router, user]);
+
+  useEffect(() => {
+    if (!LITE_MODE || !code || joined) {
+      return;
+    }
+    const saved = getSavedPlayerName();
+    if (saved.length >= 2) {
+      setNickname(saved);
+      void ensureGuestSession(saved)
+        .then(() => {
+          setJoined(true);
+          joinRoom(code);
+        })
+        .catch(() => undefined);
+    }
+  }, [code, joined, joinRoom]);
 
   useEffect(() => {
     if (alreadyInRoom) {
@@ -170,10 +187,7 @@ export default function RoomPage() {
     setSubmitting(true);
     setError('');
     try {
-      if (!user?.nickname || user.nickname !== name) {
-        const updated = await api.updateProfile({ nickname: name });
-        setUser(updated);
-      }
+      await ensureGuestSession(name);
       setJoined(true);
       setGame(null);
       syncedRef.current = null;
@@ -215,8 +229,8 @@ export default function RoomPage() {
     clearSelection();
   }
 
-  if (loading || !user) {
-    return <p className="p-10 text-center">Loading…</p>;
+  if ((!LITE_MODE && (loading || !user)) || (LITE_MODE && loading && !joined)) {
+    return <p className="p-10 text-center">{dict.waiting}</p>;
   }
 
   if (!joined && !alreadyInRoom) {
@@ -365,7 +379,7 @@ export default function RoomPage() {
                   </p>
                 </div>
               </div>
-              {isHost && p.userId !== user.id && (
+              {isHost && p.userId !== user?.id && (
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"

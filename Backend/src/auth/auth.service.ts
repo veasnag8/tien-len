@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthProvider, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
+import { isLiteMode } from '../config/lite';
 import { PrismaService } from '../prisma/prisma.service';
 import { GuestLoginDto, LoginDto, RegisterDto } from './dto/auth.dto';
 import type { UserProfile } from '@tien-len/shared';
@@ -156,8 +157,12 @@ export class AuthService {
     const payload: JwtPayload = { sub: user.id, nickname: user.nickname };
     const accessToken = await this.jwt.signAsync(payload, {
       secret: this.config.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
+      expiresIn: isLiteMode() ? '7d' : '15m',
     });
+
+    if (isLiteMode()) {
+      return { accessToken, refreshToken: '' };
+    }
 
     const refreshToken = randomBytes(48).toString('hex');
     const days = Number(this.config.get<string>('REFRESH_TOKEN_DAYS', '30'));

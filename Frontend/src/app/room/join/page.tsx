@@ -6,14 +6,14 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useGameSocket } from '@/lib/use-game-socket';
 import { useGameStore } from '@/lib/game-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
+import { ensureGuestSession, getSavedPlayerName } from '@/lib/guest-session';
 import { t } from '@/lib/i18n';
-import { api } from '@/lib/api';
 
 export default function JoinRoomPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
-  const setUser = useAuthStore((s) => s.setUser);
   const room = useGameStore((s) => s.room);
   const { joinRoom } = useGameSocket();
   const locale = useSettingsStore((s) => s.locale);
@@ -24,22 +24,30 @@ export default function JoinRoomPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!LITE_MODE && !loading && !user) {
       router.replace('/auth?next=/room/join');
     }
   }, [loading, router, user]);
 
   useEffect(() => {
-    if (user?.nickname) {
-      setNickname(user.nickname);
-    }
-  }, [user?.nickname]);
+    setNickname(getSavedPlayerName());
+  }, []);
 
   useEffect(() => {
     if (room?.code) {
       router.push(`/room/${room.code}`);
     }
   }, [room, router]);
+
+  if (LITE_MODE) {
+    return null;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -57,10 +65,7 @@ export default function JoinRoomPage() {
     setSubmitting(true);
     setError('');
     try {
-      if (!user?.nickname || user.nickname !== name) {
-        const updated = await api.updateProfile({ nickname: name });
-        setUser(updated);
-      }
+      await ensureGuestSession(name);
       joinRoom(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');

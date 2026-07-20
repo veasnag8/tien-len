@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 export default function PlayPage() {
@@ -15,10 +16,20 @@ export default function PlayPage() {
   const dict = t(locale);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!LITE_MODE && !loading && !user) {
       router.replace('/auth');
     }
   }, [loading, router, user]);
+
+  if (LITE_MODE) {
+    return null;
+  }
 
   if (loading || !user) {
     return <p className="p-10 text-center text-[var(--muted)]">Loading…</p>;
@@ -31,15 +42,9 @@ export default function PlayPage() {
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <Link href="/room/create" className="panel flex min-h-[120px] flex-col justify-center p-5 transition active:scale-[0.99] sm:p-6">
           <h2 className="font-display text-2xl text-gold-300 sm:text-3xl">{dict.createRoom}</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Generate room ID, invite link, and QR code
-          </p>
         </Link>
         <Link href="/room/join" className="panel flex min-h-[120px] flex-col justify-center p-5 transition active:scale-[0.99] sm:p-6">
           <h2 className="font-display text-2xl text-gold-300 sm:text-3xl">{dict.joinRoom}</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Join with code, invite link, or QR
-          </p>
         </Link>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 export default function ProfilePage() {
@@ -15,6 +16,12 @@ export default function ProfilePage() {
   const logout = useAuthStore((s) => s.logout);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
+
+  useEffect(() => {
+    if (LITE_MODE) {
+      router.replace('/');
+    }
+  }, [router]);
 
   const profileQuery = useQuery({
     queryKey: ['profile'],
@@ -32,6 +39,10 @@ export default function ProfilePage() {
       router.replace('/auth');
     }
   }, [loading, router, user]);
+
+  if (LITE_MODE) {
+    return null;
+  }
 
   if (loading || !user) {
     return <p className="p-10 text-center">Loading…</p>;
