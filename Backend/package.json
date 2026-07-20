@@ -7,6 +7,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
+    "start:cloud": "prisma migrate deploy --schema=../Database/schema.prisma && node dist/main",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "jest --passWithNoTests",
     "prisma:generate": "prisma generate --schema=../Database/schema.prisma",

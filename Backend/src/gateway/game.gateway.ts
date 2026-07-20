@@ -40,7 +40,10 @@ interface SocketData {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL?.split(',') ?? ['http://localhost:3000'],
+    origin:
+      process.env.LITE_MODE === 'true' || process.env.LITE_MODE === '1'
+        ? true
+        : (process.env.FRONTEND_URL?.split(',') ?? ['http://localhost:3000']),
     credentials: true,
   },
   namespace: '/game',

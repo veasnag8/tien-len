@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { getApiUrl } from './config';
 import type {
   GameHistoryEntry,
   LeaderboardEntry,
@@ -39,7 +39,7 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${getApiUrl()}${path}`, {
       ...init,
       headers,
       credentials: 'include',
@@ -49,7 +49,7 @@ class ApiClient {
       const refreshed = await this.tryRefresh();
       if (refreshed) {
         headers.set('Authorization', `Bearer ${this.accessToken}`);
-        const retry = await fetch(`${API_URL}${path}`, {
+        const retry = await fetch(`${getApiUrl()}${path}`, {
           ...init,
           headers,
           credentials: 'include',
@@ -81,7 +81,7 @@ class ApiClient {
 
   private async tryRefresh(): Promise<boolean> {
     try {
-      const data = await fetch(`${API_URL}/auth/refresh`, {
+      const data = await fetch(`${getApiUrl()}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       }).then((r) => (r.ok ? r.json() : null));

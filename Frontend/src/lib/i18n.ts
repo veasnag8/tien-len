@@ -73,6 +73,10 @@ const dictionaries = {
     liteTagline: 'Enter your name and play with friends — no login needed.',
     startPlay: 'Start playing',
     yourName: 'Your name',
+    maxPlayersLabel: 'Players in room',
+    playerCountHint: '2 to 4 players can join a room.',
+    playersCount: '{current} / {max} players',
+    startMinPlayers: 'At least 2 players required to start.',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -146,6 +150,10 @@ const dictionaries = {
     liteTagline: 'បញ្ចូលឈ្មោះរួចលេងជាមួយមិត្តភក្តិ — មិនចាំបាច់ចូលគណនី។',
     startPlay: 'ចាប់ផ្តើមលេង',
     yourName: 'ឈ្មោះរបស់អ្នក',
+    maxPlayersLabel: 'ចំនួនអ្នកលេង',
+    playerCountHint: 'អាចចូលលេងបានចាប់ពី ២ នាក់ឡើងទៅ ៤ នាក់។',
+    playersCount: '{current} / {max} នាក់',
+    startMinPlayers: 'ត្រូវការយ៉ាងហោចណាស់ ២ នាក់ដើម្បីចាប់ផ្តើម។',
   },
 } as const;
 

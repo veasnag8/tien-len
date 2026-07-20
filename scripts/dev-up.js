@@ -11,6 +11,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { ensureTienlenDatabase } = require('./db-utils');
 
 const root = path.resolve(__dirname, '..');
 const dataDir = path.join(root, 'data');
@@ -70,11 +71,7 @@ async function main() {
   }
   await pg.start();
 
-  try {
-    await pg.createDatabase('tienlen');
-  } catch {
-    // already exists
-  }
+  await ensureTienlenDatabase(pg);
 
   console.log('Starting Redis Memory Server...');
   const { RedisMemoryServer } = require('redis-memory-server');

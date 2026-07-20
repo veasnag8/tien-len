@@ -7,9 +7,12 @@ export class RedisService implements OnModuleDestroy {
   private readonly client: Redis;
 
   constructor(config: ConfigService) {
-    this.client = new Redis(config.get<string>('REDIS_URL', 'redis://localhost:6379'), {
+    const url = config.get<string>('REDIS_URL', 'redis://localhost:6379');
+    // Upstash / managed Redis often use rediss:// (TLS)
+    this.client = new Redis(url, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
+      tls: url.startsWith('rediss://') ? {} : undefined,
     });
   }
 

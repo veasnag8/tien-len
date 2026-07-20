@@ -204,7 +204,10 @@ export default function RoomPage() {
     if (!room) {
       return;
     }
-    await navigator.clipboard.writeText(room.inviteUrl);
+    const url = room.inviteUrl.startsWith('http')
+      ? room.inviteUrl
+      : `${window.location.origin}${room.inviteUrl}`;
+    await navigator.clipboard.writeText(url);
   }
 
   function downloadQr() {
@@ -327,6 +330,9 @@ export default function RoomPage() {
           <div>
             <p className="text-xs text-[var(--muted)]">{dict.roomCode}</p>
             <h1 className="font-display text-3xl tracking-wider text-gold-300 sm:text-4xl">{room.code}</h1>
+            <p className="mt-1 text-sm text-gold-400/90">
+              {dict.playersCount.replace('{current}', String(room.players.length)).replace('{max}', String(room.maxPlayers))}
+            </p>
           </div>
           {qrDataUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -359,6 +365,9 @@ export default function RoomPage() {
         </div>
 
         <h2 className="mt-6 mb-3 font-display text-xl text-gold-300 sm:text-2xl">{dict.players}</h2>
+        {room.players.length < 2 && (
+          <p className="mb-3 text-sm text-[var(--muted)]">{dict.startMinPlayers}</p>
+        )}
         <div className="space-y-2 sm:space-y-3">
           {room.players.map((p) => (
             <div

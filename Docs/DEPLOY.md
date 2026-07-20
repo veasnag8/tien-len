@@ -145,16 +145,20 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 ---
 
-## Option B — Split hosting (advanced)
+## Option B — Free split hosting (phone only, no PC)
+
+**Recommended free path:** Vercel + Render + Neon + Upstash (no credit card for free tiers).
+
+→ Full step-by-step: **[`Docs/FREE_HOSTING.md`](./FREE_HOSTING.md)**
 
 | Service | Platform | Notes |
 |---------|----------|--------|
-| Frontend | Vercel | Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL` to backend URL |
-| Backend + WS | Render / Railway / Fly.io | Must support **WebSockets** |
-| PostgreSQL | Neon / Supabase / Render | Set `DATABASE_URL` |
-| Redis | Upstash / Render | Set `REDIS_URL` |
+| Frontend | Vercel | Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL` to Render URL |
+| Backend + WS | Render | Blueprint: `render.yaml` — must support **WebSockets** |
+| PostgreSQL | Neon | Set `DATABASE_URL` (`?sslmode=require`) |
+| Redis | Upstash | Set `REDIS_URL` (`rediss://…`) |
 
-WebSocket games need the **same public origin** for API and WS, or correct CORS + cookie settings. VPS + Nginx is simpler.
+Also: Cloudflare Tunnel while PC is on → [`Docs/TUNNEL.md`](./TUNNEL.md)
 
 ---
 

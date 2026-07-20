@@ -27,10 +27,12 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "dev:local": "node scripts/dev-up.js",
-    "dev:hotspot": "node scripts/dev-up.js --hotspot"
+    "dev:hotspot": "node scripts/dev-up.js --hotspot",
+    "dev:tunnel": "node scripts/dev-tunnel.js"
   },
   "devDependencies": {
     "embedded-postgres": "^17.6.0-beta.15",
+    "http-proxy": "^1.18.1",
     "redis-memory-server": "^0.12.1",
     "typescript": "^5.7.3"
   },

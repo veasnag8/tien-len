@@ -15,6 +15,7 @@ import {
 } from '@tien-len/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { isLiteMode } from '../config/lite';
 
 @Injectable()
 export class RoomsService {
@@ -25,8 +26,14 @@ export class RoomsService {
   ) {}
 
   private inviteUrl(code: string): string {
+    if (isLiteMode() && process.env.RELATIVE_INVITE_URLS === 'true') {
+      return `/room/${code}`;
+    }
     const raw = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const base = raw.split(',')[0]?.trim() || 'http://localhost:3000';
+    if (base === '*') {
+      return `/room/${code}`;
+    }
     return `${base.replace(/\/$/, '')}/room/${code}`;
   }
 

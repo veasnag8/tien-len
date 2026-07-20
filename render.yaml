@@ -1,0 +1,28 @@
+# Free-tier Blueprint: NestJS API + Socket.IO on Render
+# Dashboard: New → Blueprint → connect this repo
+# After deploy: set DATABASE_URL, REDIS_URL, JWT_SECRET, FRONTEND_URL in the service
+
+services:
+  - type: web
+    name: tienlen-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build -w Shared && npm run build -w Socket && npm run prisma:generate -w Backend && npm run build -w Backend
+    startCommand: npm run start:cloud -w Backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LITE_MODE
+        value: "true"
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false

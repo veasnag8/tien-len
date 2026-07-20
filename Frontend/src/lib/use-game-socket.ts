@@ -5,7 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { SocketEvents } from '@tien-len/socket';
 import type { Card } from '@tien-len/shared';
 import { v4 as uuidv4 } from 'uuid';
-import { WS_URL } from './config';
+import { getWsUrl } from './config';
 import { api } from './api';
 import { useGameStore } from './game-store';
 import { useAuthStore } from './auth-store';
@@ -94,9 +94,9 @@ function getOrCreateSocket(): Socket | null {
   }
 
   if (!sharedSocket) {
-    sharedSocket = io(`${WS_URL}/game`, {
+    sharedSocket = io(`${getWsUrl()}/game`, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: Infinity,

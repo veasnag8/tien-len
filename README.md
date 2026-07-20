@@ -41,7 +41,13 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Production (VPS): see **[Docs/DEPLOY.md](Docs/DEPLOY.md)**.
+## Deploy
+
+| Mode | Guide |
+|------|--------|
+| **Free (phone only, no PC)** | [Docs/FREE_HOSTING.md](Docs/FREE_HOSTING.md) — Vercel + Render + Neon + Upstash |
+| **VPS / Docker** | [Docs/DEPLOY.md](Docs/DEPLOY.md) |
+| **PC on + tunnel** | [Docs/TUNNEL.md](Docs/TUNNEL.md) — `npm run dev:tunnel` |
 
 ```bash
 npm run docker:prod
