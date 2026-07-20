@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Migrations live in Database/migrations relative to this schema file.
+
+enum AuthProvider {
+  email
+  google
+  facebook
+  guest
+}
+
+enum RoomStatus {
+  waiting
+  playing
+  finished
+  closed
+}
+
+enum LeaderboardPeriod {
+  daily
+  weekly
+  monthly
+  all_time
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String?      @unique
+  passwordHash String?
+  nickname     String
+  avatarUrl    String?
+  country      String       @default("KH")
+  provider     AuthProvider @default(email)
+  providerId   String?
+  gamesPlayed  Int          @default(0)
+  wins         Int          @default(0)
+  points       Int          @default(0)
+  isGuest      Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  hostedRooms  Room[]           @relation("RoomHost")
+  roomPlayers  RoomPlayer[]
+  gameResults  GameResult[]
+  chatMessages ChatMessage[]
+  refreshTokens RefreshToken[]
+
+  @@unique([provider, providerId])
+  @@index([points])
+  @@index([wins])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Room {
+  id                        String     @id @default(uuid())
+  code                      String     @unique
+  status                    RoomStatus @default(waiting)
+  hostId                    String
+  host                      User       @relation("RoomHost", fields: [hostId], references: [id])
+  maxPlayers                Int        @default(4)
+  allowFiveConsecutivePairs Boolean    @default(true)
+  turnTimeoutMs             Int        @default(30000)
+  isPrivate                 Boolean    @default(false)
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
+
+  players      RoomPlayer[]
+  games        Game[]
+  chatMessages ChatMessage[]
+
+  @@index([status])
+}
+
+model RoomPlayer {
+  id         String   @id @default(uuid())
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seatIndex  Int
+  isReady    Boolean  @default(false)
+  isConnected Boolean @default(true)
+  joinedAt   DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@unique([roomId, seatIndex])
+  @@index([userId])
+}
+
+model Game {
+  id         String   @id @default(uuid())
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roundNumber Int     @default(1)
+  startedAt  DateTime @default(now())
+  endedAt    DateTime?
+  stateJson  Json?
+
+  results GameResult[]
+
+  @@index([roomId])
+}
+
+model GameResult {
+  id          String   @id @default(uuid())
+  gameId      String
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placement   Int
+  playerCount Int
+  points      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([gameId, userId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  isEmoji   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+model LeaderboardSnapshot {
+  id        String            @id @default(uuid())
+  period    LeaderboardPeriod
+  userId    String
+  points    Int
+  wins      Int
+  games     Int
+  rank      Int
+  computedAt DateTime         @default(now())
+
+  @@unique([period, userId])
+  @@index([period, rank])
+}

@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+Backend/prisma/migrations/**/migration_lock.toml
+
+# Docker volumes / local embedded DB
+data/
+data/postgres/
+data/redis/
+
+# Uploads / generated
+Assets/generated/
+Frontend/public/uploads/
+*.qr.png
+
+# Misc
+*.pem
+.turbo/
+.cache/
+tmp/
+temp/
+Backend/.env
+Frontend/.env

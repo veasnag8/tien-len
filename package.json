@@ -1,0 +1,40 @@
+{
+  "name": "tien-len-mien-nam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-quality online multiplayer Tiến Lên Miền Nam",
+  "workspaces": [
+    "Frontend",
+    "Backend",
+    "Shared",
+    "Socket"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:frontend": "npm run dev -w Frontend",
+    "dev:backend": "npm run start:dev -w Backend",
+    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w Shared",
+    "build:frontend": "npm run build -w Frontend",
+    "build:backend": "npm run build -w Backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run prisma:generate -w Backend",
+    "db:migrate": "npm run prisma:migrate -w Backend",
+    "db:seed": "npm run prisma:seed -w Backend",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "dev:local": "node scripts/dev-up.js"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^17.6.0-beta.15",
+    "redis-memory-server": "^0.12.1",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "license": "UNLICENSED"
+}
