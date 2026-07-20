@@ -25,18 +25,18 @@ export default function PlayPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-12">
-      <h1 className="font-display mb-2 text-5xl text-gold-300">{dict.play}</h1>
-      <p className="mb-8 text-[var(--muted)]">Welcome, {user.nickname}</p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link href="/room/create" className="panel p-6 transition hover:border-gold-400/50">
-          <h2 className="font-display text-3xl text-gold-300">{dict.createRoom}</h2>
+    <div className="page-pad mx-auto max-w-3xl">
+      <h1 className="font-display mb-2 text-4xl text-gold-300 sm:text-5xl">{dict.play}</h1>
+      <p className="mb-6 text-[var(--muted)]">Welcome, {user.nickname}</p>
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <Link href="/room/create" className="panel flex min-h-[120px] flex-col justify-center p-5 transition active:scale-[0.99] sm:p-6">
+          <h2 className="font-display text-2xl text-gold-300 sm:text-3xl">{dict.createRoom}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Generate room ID, invite link, and QR code
           </p>
         </Link>
-        <Link href="/room/join" className="panel p-6 transition hover:border-gold-400/50">
-          <h2 className="font-display text-3xl text-gold-300">{dict.joinRoom}</h2>
+        <Link href="/room/join" className="panel flex min-h-[120px] flex-col justify-center p-5 transition active:scale-[0.99] sm:p-6">
+          <h2 className="font-display text-2xl text-gold-300 sm:text-3xl">{dict.joinRoom}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Join with code, invite link, or QR
           </p>

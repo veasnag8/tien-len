@@ -13,95 +13,113 @@ import { sounds } from './sounds';
 import { useSettingsStore } from './settings-store';
 
 let sharedSocket: Socket | null = null;
+let listenersAttached = false;
+let pendingRoomCode: string | null = null;
+
+function emitWhenConnected(socket: Socket, event: string, payload?: unknown): void {
+  const emit = () => socket.emit(event, payload);
+  if (socket.connected) {
+    window.setTimeout(emit, 120);
+    return;
+  }
+  const onConnect = () => {
+    socket.off('connect', onConnect);
+    window.setTimeout(emit, 120);
+  };
+  socket.on('connect', onConnect);
+  if (!socket.active) {
+    socket.connect();
+  }
+}
+
+function syncPendingRoom(socket: Socket): void {
+  if (!pendingRoomCode) {
+    return;
+  }
+  const code = pendingRoomCode;
+  emitWhenConnected(socket, SocketEvents.ROOM_JOIN, { code });
+  emitWhenConnected(socket, SocketEvents.PLAYER_RECONNECT, { roomCode: code });
+}
+
+function attachSocketListeners(socket: Socket): void {
+  if (listenersAttached) {
+    return;
+  }
+  listenersAttached = true;
+
+  socket.on('connect', () => {
+    syncPendingRoom(socket);
+  });
+
+  socket.on(SocketEvents.AUTH_IDENTIFIED, (payload: { user: import('@tien-len/shared').UserProfile }) => {
+    useAuthStore.getState().setUser(payload.user);
+  });
+  socket.on(SocketEvents.ROOM_CREATED, (payload: {
+    room: import('@tien-len/shared').RoomInfo;
+    qrDataUrl: string;
+  }) => {
+    useGameStore.getState().setRoom(payload.room);
+    useGameStore.getState().setQrDataUrl(payload.qrDataUrl);
+  });
+  socket.on(SocketEvents.ROOM_JOINED, (payload: { room: import('@tien-len/shared').RoomInfo }) => {
+    useGameStore.getState().setRoom(payload.room);
+  });
+  socket.on(SocketEvents.ROOM_UPDATE, (payload: { room: import('@tien-len/shared').RoomInfo }) => {
+    useGameStore.getState().setRoom(payload.room);
+  });
+  socket.on(SocketEvents.GAME_PRIVATE_STATE, (payload: {
+    state: import('@tien-len/shared').PrivateGameState;
+  }) => {
+    useGameStore.getState().setGame(payload.state);
+    useGameStore.getState().clearSelection();
+  });
+  socket.on(SocketEvents.CHAT_MESSAGE, (payload: { message: import('@tien-len/shared').ChatMessage }) => {
+    useGameStore.getState().addChat(payload.message);
+  });
+  socket.on(SocketEvents.GAME_FINISHED, () => {
+    sounds.play('win', useSettingsStore.getState().soundEnabled);
+  });
+  socket.on(SocketEvents.GAME_TIMEOUT, () => {
+    sounds.play('countdown', useSettingsStore.getState().soundEnabled);
+  });
+  socket.on(SocketEvents.ROOM_ERROR, (payload: { code: string; message: string }) => {
+    console.warn('[socket] room error', payload.code, payload.message);
+  });
+}
+
+function getOrCreateSocket(): Socket | null {
+  const token = api.loadToken();
+  if (!token) {
+    return null;
+  }
+
+  if (!sharedSocket) {
+    sharedSocket = io(`${WS_URL}/game`, {
+      auth: { token },
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+    });
+    attachSocketListeners(sharedSocket);
+  } else {
+    sharedSocket.auth = { token };
+  }
+
+  if (!sharedSocket.connected && !sharedSocket.active) {
+    sharedSocket.connect();
+  }
+
+  return sharedSocket;
+}
 
 export function useGameSocket() {
   const socketRef = useRef<Socket | null>(null);
-  const setRoom = useGameStore((s) => s.setRoom);
-  const setQr = useGameStore((s) => s.setQrDataUrl);
-  const setGame = useGameStore((s) => s.setGame);
-  const addChat = useGameStore((s) => s.addChat);
-  const clearSelection = useGameStore((s) => s.clearSelection);
-  const setUser = useAuthStore((s) => s.setUser);
-  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
 
   useEffect(() => {
-    const token = api.loadToken();
-    if (!token) {
-      return;
-    }
-
-    if (!sharedSocket) {
-      sharedSocket = io(`${WS_URL}/game`, {
-        auth: { token },
-        transports: ['websocket'],
-        autoConnect: true,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 800,
-      });
-    } else {
-      sharedSocket.auth = { token };
-    }
-
-    const socket = sharedSocket;
-    socketRef.current = socket;
-
-    const onAuth = (payload: { user: import('@tien-len/shared').UserProfile }) => {
-      setUser(payload.user);
-    };
-    const onCreated = (payload: {
-      room: import('@tien-len/shared').RoomInfo;
-      qrDataUrl: string;
-    }) => {
-      setRoom(payload.room);
-      setQr(payload.qrDataUrl);
-    };
-    const onJoined = (payload: { room: import('@tien-len/shared').RoomInfo }) => {
-      setRoom(payload.room);
-    };
-    const onUpdate = (payload: { room: import('@tien-len/shared').RoomInfo }) => {
-      setRoom(payload.room);
-    };
-    const onPrivate = (payload: {
-      state: import('@tien-len/shared').PrivateGameState;
-    }) => {
-      setGame(payload.state);
-      clearSelection();
-    };
-    const onChat = (payload: { message: import('@tien-len/shared').ChatMessage }) => {
-      addChat(payload.message);
-    };
-    const onFinished = () => {
-      sounds.play('win', soundEnabled);
-    };
-    const onTimeout = () => {
-      sounds.play('countdown', soundEnabled);
-    };
-
-    socket.on(SocketEvents.AUTH_IDENTIFIED, onAuth);
-    socket.on(SocketEvents.ROOM_CREATED, onCreated);
-    socket.on(SocketEvents.ROOM_JOINED, onJoined);
-    socket.on(SocketEvents.ROOM_UPDATE, onUpdate);
-    socket.on(SocketEvents.GAME_PRIVATE_STATE, onPrivate);
-    socket.on(SocketEvents.CHAT_MESSAGE, onChat);
-    socket.on(SocketEvents.GAME_FINISHED, onFinished);
-    socket.on(SocketEvents.GAME_TIMEOUT, onTimeout);
-
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    return () => {
-      socket.off(SocketEvents.AUTH_IDENTIFIED, onAuth);
-      socket.off(SocketEvents.ROOM_CREATED, onCreated);
-      socket.off(SocketEvents.ROOM_JOINED, onJoined);
-      socket.off(SocketEvents.ROOM_UPDATE, onUpdate);
-      socket.off(SocketEvents.GAME_PRIVATE_STATE, onPrivate);
-      socket.off(SocketEvents.CHAT_MESSAGE, onChat);
-      socket.off(SocketEvents.GAME_FINISHED, onFinished);
-      socket.off(SocketEvents.GAME_TIMEOUT, onTimeout);
-    };
-  }, [addChat, clearSelection, setGame, setQr, setRoom, setUser, soundEnabled]);
+    socketRef.current = getOrCreateSocket();
+  }, []);
 
   const createRoom = useCallback(
     (settings: {
@@ -109,16 +127,26 @@ export function useGameSocket() {
       allowFiveConsecutivePairs?: boolean;
       isPrivate?: boolean;
     }) => {
-      socketRef.current?.emit(SocketEvents.ROOM_CREATE, { settings });
+      const socket = getOrCreateSocket();
+      if (!socket) {
+        return;
+      }
+      emitWhenConnected(socket, SocketEvents.ROOM_CREATE, { settings });
     },
     [],
   );
 
   const joinRoom = useCallback((code: string) => {
-    socketRef.current?.emit(SocketEvents.ROOM_JOIN, { code });
+    pendingRoomCode = code.toUpperCase();
+    const socket = getOrCreateSocket();
+    if (!socket) {
+      return;
+    }
+    emitWhenConnected(socket, SocketEvents.ROOM_JOIN, { code: pendingRoomCode });
   }, []);
 
   const leaveRoom = useCallback(() => {
+    pendingRoomCode = null;
     socketRef.current?.emit(SocketEvents.ROOM_LEAVE);
   }, []);
 
@@ -140,6 +168,7 @@ export function useGameSocket() {
   }, []);
 
   const closeRoom = useCallback(() => {
+    pendingRoomCode = null;
     socketRef.current?.emit(SocketEvents.ROOM_CLOSE);
   }, []);
 
@@ -165,7 +194,20 @@ export function useGameSocket() {
   }, []);
 
   const reconnect = useCallback((roomCode: string) => {
-    socketRef.current?.emit(SocketEvents.PLAYER_RECONNECT, { roomCode });
+    pendingRoomCode = roomCode.toUpperCase();
+    const socket = getOrCreateSocket();
+    if (!socket) {
+      return;
+    }
+    emitWhenConnected(socket, SocketEvents.PLAYER_RECONNECT, { roomCode: pendingRoomCode });
+  }, []);
+
+  const requestGameState = useCallback(() => {
+    const socket = getOrCreateSocket();
+    if (!socket) {
+      return;
+    }
+    emitWhenConnected(socket, SocketEvents.GAME_REQUEST_STATE);
   }, []);
 
   return {
@@ -182,5 +224,6 @@ export function useGameSocket() {
     pass,
     sendChat,
     reconnect,
+    requestGameState,
   };
 }

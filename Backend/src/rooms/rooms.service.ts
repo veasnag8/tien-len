@@ -216,6 +216,7 @@ export class RoomsService {
   }
 
   async getRoomInfo(roomId: string): Promise<RoomInfo> {
+    await this.recoverIfStale(roomId);
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -228,6 +229,30 @@ export class RoomsService {
     const info = this.toRoomInfo(room);
     await this.redis.setJson(`room:${roomId}`, info, 60 * 60 * 6);
     return info;
+  }
+
+  /** Reset lobby when DB says playing/finished but Redis game state is gone. */
+  async recoverIfStale(roomId: string): Promise<void> {
+    const room = await this.prisma.room.findUnique({ where: { id: roomId } });
+    if (
+      !room ||
+      (room.status !== RoomStatus.playing && room.status !== RoomStatus.finished)
+    ) {
+      return;
+    }
+    const hasGame = await this.redis.get(`game:${roomId}`);
+    if (hasGame) {
+      return;
+    }
+    await this.redis.del(`game:${roomId}`);
+    await this.prisma.roomPlayer.updateMany({
+      where: { roomId },
+      data: { isReady: false },
+    });
+    await this.prisma.room.update({
+      where: { id: roomId },
+      data: { status: RoomStatus.waiting },
+    });
   }
 
   async getRoomByCode(code: string): Promise<RoomInfo> {

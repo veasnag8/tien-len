@@ -33,6 +33,7 @@ export const SocketEvents = {
 
   GAME_STATE: 'game:state',
   GAME_PRIVATE_STATE: 'game:private_state',
+  GAME_REQUEST_STATE: 'game:request_state',
   GAME_PLAY: 'game:play',
   GAME_PASS: 'game:pass',
   GAME_TIMEOUT: 'game:timeout',
@@ -104,6 +105,7 @@ export interface ClientToServerEvents {
   [SocketEvents.ROOM_CLOSE]: () => void;
   [SocketEvents.ROOM_RESTART]: () => void;
   [SocketEvents.ROOM_PLAY_AGAIN]: () => void;
+  [SocketEvents.GAME_REQUEST_STATE]: () => void;
   [SocketEvents.GAME_PLAY]: (payload: GamePlayPayload) => void;
   [SocketEvents.GAME_PASS]: (payload: GamePassPayload) => void;
   [SocketEvents.CHAT_SEND]: (payload: ChatSendPayload) => void;

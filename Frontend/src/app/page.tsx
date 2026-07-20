@@ -10,25 +10,24 @@ export default function HomePage() {
   const dict = t(locale);
 
   return (
-    <section className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl flex-col justify-center px-5 pb-16 pt-8 md:px-10">
+    <section className="page-pad mx-auto flex min-h-[calc(100dvh-var(--header-h)-var(--mobile-nav-h))] max-w-6xl flex-col justify-center pb-8">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <motion.div
-          className="absolute -right-16 top-8 h-80 w-80 rounded-full bg-[#c43c3c]/15 blur-3xl"
+          className="absolute -right-16 top-8 h-56 w-56 rounded-full bg-crimson/15 blur-3xl sm:h-80 sm:w-80"
           animate={{ scale: [1, 1.12, 1], opacity: [0.35, 0.6, 0.35] }}
           transition={{ duration: 9, repeat: Infinity }}
         />
         <motion.div
-          className="absolute bottom-8 left-0 h-96 w-96 rounded-full bg-gold-500/12 blur-3xl"
+          className="absolute bottom-24 left-0 h-64 w-64 rounded-full bg-gold-500/12 blur-3xl sm:bottom-8 sm:h-96 sm:w-96"
           animate={{ y: [0, -18, 0] }}
           transition={{ duration: 11, repeat: Infinity }}
         />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-400/50 to-transparent" />
       </div>
 
       <motion.p
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-3 text-sm tracking-[0.28em] text-gold-400"
+        className="mb-2 text-xs tracking-[0.22em] text-gold-400 sm:text-sm sm:tracking-[0.28em]"
       >
         {dict.eyebrow}
       </motion.p>
@@ -37,7 +36,7 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        className="font-display max-w-4xl text-5xl leading-tight text-gold-300 md:text-7xl"
+        className="font-display max-w-4xl text-4xl leading-tight text-gold-300 sm:text-5xl md:text-7xl"
       >
         {dict.brand}
       </motion.h1>
@@ -46,7 +45,7 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.14 }}
-        className="mt-2 text-xl text-[var(--muted)] md:text-2xl"
+        className="mt-1 text-lg text-[var(--muted)] sm:text-xl md:text-2xl"
       >
         {dict.brandKh}
       </motion.p>
@@ -55,7 +54,7 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mt-5 max-w-xl text-lg text-[var(--muted)]"
+        className="mt-4 max-w-xl text-base text-[var(--muted)] sm:text-lg"
       >
         {dict.tagline}
       </motion.p>
@@ -64,15 +63,15 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.28 }}
-        className="mt-10 flex flex-wrap gap-3"
+        className="mt-8 grid gap-3 sm:mt-10 sm:flex sm:flex-wrap"
       >
-        <Link href="/play" className="btn-primary">
+        <Link href="/play" className="btn-primary w-full sm:w-auto">
           {dict.play}
         </Link>
-        <Link href="/room/create" className="btn-secondary">
+        <Link href="/room/create" className="btn-secondary w-full sm:w-auto">
           {dict.createRoom}
         </Link>
-        <Link href="/room/join" className="btn-secondary">
+        <Link href="/room/join" className="btn-secondary w-full sm:w-auto">
           {dict.joinRoom}
         </Link>
       </motion.div>
@@ -81,19 +80,20 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.45 }}
-        className="mt-16 grid max-w-3xl gap-4 sm:grid-cols-3"
+        className="mt-10 grid grid-cols-3 gap-2 sm:mt-16 sm:max-w-3xl sm:gap-4"
       >
         {[
-          { href: '/profile', label: dict.profile },
-          { href: '/leaderboard', label: dict.leaderboard },
-          { href: '/settings', label: dict.settings },
+          { href: '/profile', label: dict.profile, icon: '👤' },
+          { href: '/leaderboard', label: dict.leaderboard, icon: '🏆' },
+          { href: '/settings', label: dict.settings, icon: '⚙️' },
         ].map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="panel px-4 py-5 transition hover:border-gold-400/50"
+            className="panel flex flex-col items-center gap-2 px-2 py-4 text-center transition active:scale-[0.98] sm:items-start sm:px-4 sm:py-5 sm:text-left"
           >
-            <span className="font-display text-2xl text-gold-300">{item.label}</span>
+            <span className="text-2xl sm:hidden">{item.icon}</span>
+            <span className="font-display text-sm text-gold-300 sm:text-2xl">{item.label}</span>
           </Link>
         ))}
       </motion.div>

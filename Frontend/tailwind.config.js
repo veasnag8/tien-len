@@ -5,6 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        crimson: '#c43c3c',
         felt: {
           50: '#eef2f8',
           100: '#d6e0ef',
@@ -42,6 +43,14 @@ module.exports = {
           'radial-gradient(ellipse at center, #1c4270 0%, #07111f 70%)',
         'hero-mesh':
           'radial-gradient(at 18% 18%, rgba(224,184,74,0.2) 0px, transparent 45%), radial-gradient(at 82% 12%, rgba(196,60,60,0.18) 0px, transparent 42%), linear-gradient(160deg, #050d18 0%, #0c1c34 48%, #07111f 100%)',
+        'card-shine':
+          'linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 50%)',
+      },
+      minHeight: {
+        dvh: '100dvh',
+      },
+      spacing: {
+        'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
       },
     },
   },

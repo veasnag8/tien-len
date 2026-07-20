@@ -238,6 +238,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(data.roomId).emit(SocketEvents.ROOM_UPDATE, { room });
   }
 
+  @SubscribeMessage(SocketEvents.GAME_REQUEST_STATE)
+  async onRequestState(@ConnectedSocket() client: Socket): Promise<void> {
+    const data = client.data as SocketData;
+    if (!data.userId || !data.roomId) {
+      return;
+    }
+    const privateState = await this.game.getPrivateState(data.roomId, data.userId);
+    if (privateState) {
+      client.emit(SocketEvents.GAME_PRIVATE_STATE, { state: privateState });
+      return;
+    }
+    await this.rooms.recoverIfStale(data.roomId);
+    const room = await this.rooms.getRoomInfo(data.roomId);
+    client.emit(SocketEvents.ROOM_UPDATE, { room });
+  }
+
   @SubscribeMessage(SocketEvents.GAME_PLAY)
   async onPlay(
     @ConnectedSocket() client: Socket,
@@ -358,6 +374,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit(SocketEvents.GAME_PRIVATE_STATE, { state: privateState });
     }
     client.emit(SocketEvents.PLAYER_RECONNECTED, { userId });
+    client.emit(SocketEvents.ROOM_JOINED, { room });
   }
 
   private async identify(client: Socket, token: string): Promise<void> {

@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, Suspense, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { useSettingsStore } from '@/lib/settings-store';
 import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const nextPath = params.get('next') || '/play';
   const setUser = useAuthStore((s) => s.setUser);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
@@ -20,6 +22,10 @@ export default function AuthPage() {
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function goNext() {
+    router.push(nextPath.startsWith('/') ? nextPath : '/play');
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -32,7 +38,7 @@ export default function AuthPage() {
           : await api.register({ email, password, nickname });
       api.setToken(result.accessToken);
       setUser(result.user);
-      router.push('/play');
+      goNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     } finally {
@@ -41,13 +47,18 @@ export default function AuthPage() {
   }
 
   async function guest() {
+    const name = nickname.trim();
+    if (!name || name.length < 2) {
+      setError(dict.nicknameRequired);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const result = await api.guest({ nickname: nickname || undefined });
+      const result = await api.guest({ nickname: name });
       api.setToken(result.accessToken);
       setUser(result.user);
-      router.push('/play');
+      goNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     } finally {
@@ -56,8 +67,8 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-5 py-12">
-      <div className="panel p-6 md:p-8">
+    <div className="page-pad mx-auto max-w-md">
+      <div className="panel p-5 sm:p-8">
         <h1 className="font-display mb-6 text-4xl text-gold-300">
           {mode === 'login' ? dict.login : dict.register}
         </h1>
@@ -74,17 +85,17 @@ export default function AuthPage() {
         <div className="my-5 text-center text-sm text-[var(--muted)]">or</div>
 
         <form className="space-y-3" onSubmit={onSubmit}>
-          {mode === 'register' && (
-            <input
-              className="w-full rounded-xl border border-[var(--border)] bg-black/20 px-4 py-3"
-              placeholder={dict.nickname}
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              required
-            />
-          )}
           <input
-            className="w-full rounded-xl border border-[var(--border)] bg-black/20 px-4 py-3"
+            className="input-field"
+            placeholder={dict.enterNickname}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            minLength={2}
+            maxLength={24}
+            required={mode === 'register'}
+          />
+          <input
+            className="input-field"
             type="email"
             placeholder={dict.email}
             value={email}
@@ -92,7 +103,7 @@ export default function AuthPage() {
             required
           />
           <input
-            className="w-full rounded-xl border border-[var(--border)] bg-black/20 px-4 py-3"
+            className="input-field"
             type="password"
             placeholder={dict.password}
             value={password}
@@ -128,5 +139,13 @@ export default function AuthPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<p className="p-10 text-center">Loading…</p>}>
+      <AuthForm />
+    </Suspense>
   );
 }

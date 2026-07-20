@@ -36,11 +36,11 @@ export default function CreateRoomPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-5 py-12">
-      <div className="panel p-6 md:p-8">
-        <h1 className="font-display mb-6 text-4xl text-gold-300">{dict.createRoom}</h1>
+    <div className="page-pad mx-auto max-w-lg">
+      <div className="panel p-5 sm:p-8">
+        <h1 className="font-display mb-6 text-3xl text-gold-300 sm:text-4xl">{dict.createRoom}</h1>
         <label className="mb-2 block text-sm text-[var(--muted)]">{dict.players}</label>
-        <div className="mb-5 flex gap-2">
+        <div className="mb-5 grid grid-cols-3 gap-2">
           {([2, 3, 4] as const).map((n) => (
             <button
               key={n}

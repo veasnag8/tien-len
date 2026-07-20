@@ -14,6 +14,8 @@
   --crimson: #c43c3c;
   --panel: rgba(12, 28, 52, 0.78);
   --border: rgba(224, 184, 74, 0.28);
+  --header-h: 3.5rem;
+  --mobile-nav-h: 4.25rem;
 }
 
 .dark {
@@ -25,16 +27,18 @@
   --border: rgba(224, 184, 74, 0.32);
 }
 
-html,
-body {
+html {
   min-height: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
+  min-height: 100dvh;
   font-family: var(--font-body);
   background: var(--bg);
   color: var(--fg);
   line-height: 1.65;
+  overscroll-behavior-y: none;
 }
 
 html[lang='en'] body {
@@ -46,15 +50,49 @@ html[lang='en'] .font-display {
 }
 
 @layer components {
+  .app-shell {
+    @apply min-h-dvh pb-[calc(var(--mobile-nav-h)+env(safe-area-inset-bottom,0px))] pt-[var(--header-h)] md:pb-0;
+  }
+
+  .app-shell-game {
+    @apply min-h-dvh pt-[var(--header-h)] md:pb-0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .page-pad {
+    @apply px-4 py-6 sm:px-5 md:px-10 md:py-10;
+  }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-gold-500 px-5 py-3 font-semibold text-ink-900 transition hover:bg-gold-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-gold-500 px-5 py-3 text-base font-semibold text-ink-900 shadow-lg shadow-gold-500/20 transition active:scale-[0.98] hover:bg-gold-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel)] px-5 py-3 font-semibold text-[var(--fg)] backdrop-blur transition hover:border-gold-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300;
+    @apply inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-5 py-3 text-base font-semibold text-[var(--fg)] backdrop-blur transition active:scale-[0.98] hover:border-gold-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300;
+  }
+
+  .btn-ghost {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-[var(--muted)] transition active:bg-white/5 hover:text-[var(--fg)];
   }
 
   .panel {
-    @apply rounded-2xl border border-[var(--border)] bg-[var(--panel)] backdrop-blur-md;
+    @apply rounded-3xl border border-[var(--border)] bg-[var(--panel)] shadow-xl shadow-black/20 backdrop-blur-md;
+  }
+
+  .panel-glass {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
+  }
+
+  .input-field {
+    @apply w-full min-h-[48px] rounded-2xl border border-[var(--border)] bg-black/25 px-4 py-3 text-base text-[var(--fg)] outline-none transition placeholder:text-[var(--muted)] focus:border-gold-400 focus:ring-2 focus:ring-gold-400/20;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-black/25 px-3 py-1.5 text-xs font-medium;
+  }
+
+  .game-action-bar {
+    @apply fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[rgba(5,13,24,0.94)] px-4 py-3 backdrop-blur-xl md:static md:border-0 md:bg-transparent md:p-0;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
 }

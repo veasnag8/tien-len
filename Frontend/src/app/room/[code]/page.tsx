@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useGameStore } from '@/lib/game-store';
 import { useGameSocket } from '@/lib/use-game-socket';
 import { useSettingsStore } from '@/lib/settings-store';
 import { t } from '@/lib/i18n';
+import { api } from '@/lib/api';
 import { RoomChat } from '@/components/RoomChat';
+import { MobileChatSheet } from '@/components/MobileChatSheet';
 import { GameTable } from '@/components/GameTable';
 
 export default function RoomPage() {
@@ -16,6 +18,7 @@ export default function RoomPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
+  const setUser = useAuthStore((s) => s.setUser);
   const room = useGameStore((s) => s.room);
   const qrDataUrl = useGameStore((s) => s.qrDataUrl);
   const game = useGameStore((s) => s.game);
@@ -25,24 +28,120 @@ export default function RoomPage() {
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
-  const { joinRoom, reconnect, setReady, startGame, kick, transferHost, closeRoom, playCards, pass, playAgain, sendChat } =
+  const { joinRoom, reconnect, requestGameState, setReady, startGame, kick, transferHost, closeRoom, playCards, pass, playAgain, sendChat } =
     useGameSocket();
+
+  const setRoom = useGameStore((s) => s.setRoom);
+  const setGame = useGameStore((s) => s.setGame);
+  const syncedRef = useRef<string | null>(null);
+  const recoveryAttemptedRef = useRef(false);
+
+  const alreadyInRoom = Boolean(
+    user && room?.code === code && room.players.some((p) => p.userId === user.id),
+  );
+
+  const [joined, setJoined] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
+
+  useEffect(() => {
+    syncedRef.current = null;
+    recoveryAttemptedRef.current = false;
+    setGame(null);
+    setSyncTimedOut(false);
+    if (room && code && room.code !== code) {
+      setRoom(null);
+    }
+  }, [code, room, setGame, setRoom]);
+
+  useEffect(() => {
+    if (user?.nickname) {
+      setNickname(user.nickname);
+    }
+  }, [user?.nickname]);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/auth');
+      router.replace(`/auth?next=${encodeURIComponent(`/room/${code ?? ''}`)}`);
     }
-  }, [loading, router, user]);
+  }, [code, loading, router, user]);
 
   useEffect(() => {
-    if (!user || !code) {
+    if (alreadyInRoom) {
+      setJoined(true);
+    }
+  }, [alreadyInRoom]);
+
+  useEffect(() => {
+    if (!user || !code || !joined) {
       return;
     }
-    if (!room || room.code !== code) {
-      joinRoom(code);
-      reconnect(code);
+    if (syncedRef.current === code) {
+      return;
     }
-  }, [code, joinRoom, reconnect, room, user]);
+    syncedRef.current = code;
+    void api.getRoom(code).then((fresh) => setRoom(fresh)).catch(() => undefined);
+    joinRoom(code);
+    reconnect(code);
+  }, [code, joinRoom, joined, reconnect, setRoom, user]);
+
+  useEffect(() => {
+    if (!joined || !code || room?.status !== 'playing' || game) {
+      return;
+    }
+    const timer = window.setTimeout(() => requestGameState(), 400);
+    return () => window.clearTimeout(timer);
+  }, [code, game, joined, requestGameState, room?.status]);
+
+  useEffect(() => {
+    if (!joined || !code || !room) {
+      return;
+    }
+    if (room.status !== 'playing' && room.status !== 'finished') {
+      recoveryAttemptedRef.current = false;
+      setSyncTimedOut(false);
+      return;
+    }
+    if (game) {
+      recoveryAttemptedRef.current = false;
+      setSyncTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (recoveryAttemptedRef.current) {
+        setSyncTimedOut(true);
+        return;
+      }
+      recoveryAttemptedRef.current = true;
+      void api
+        .getRoom(code)
+        .then((fresh) => {
+          setRoom(fresh);
+          if (fresh.status === 'waiting') {
+            setGame(null);
+            setSyncTimedOut(false);
+            recoveryAttemptedRef.current = false;
+            return;
+          }
+          reconnect(code);
+          joinRoom(code);
+          requestGameState();
+          window.setTimeout(() => setSyncTimedOut(true), 2000);
+        })
+        .catch(() => setSyncTimedOut(true));
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [code, game, joinRoom, joined, reconnect, requestGameState, room, setGame, setRoom]);
+
+  useEffect(() => {
+    if (room?.status === 'waiting') {
+      setGame(null);
+      setSyncTimedOut(false);
+      recoveryAttemptedRef.current = false;
+    }
+  }, [room?.status, setGame]);
 
   const isHost = room?.hostId === user?.id;
   const me = room?.players.find((p) => p.userId === user?.id);
@@ -55,6 +154,37 @@ export default function RoomPage() {
     }
     return room.players.every((p) => p.isReady || p.userId === room.hostId);
   }, [isHost, room]);
+
+  async function onConfirmJoin(e: FormEvent) {
+    e.preventDefault();
+    const name = nickname.trim();
+    if (!name || name.length < 2) {
+      setError(dict.nicknameRequired);
+      return;
+    }
+    if (!code) {
+      setError(dict.roomCodeRequired);
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    try {
+      if (!user?.nickname || user.nickname !== name) {
+        const updated = await api.updateProfile({ nickname: name });
+        setUser(updated);
+      }
+      setJoined(true);
+      setGame(null);
+      syncedRef.current = null;
+      recoveryAttemptedRef.current = false;
+      joinRoom(code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function copyLink() {
     if (!room) {
@@ -89,16 +219,78 @@ export default function RoomPage() {
     return <p className="p-10 text-center">Loading…</p>;
   }
 
+  if (!joined && !alreadyInRoom) {
+    return (
+      <div className="page-pad mx-auto max-w-lg">
+        <form className="panel space-y-4 p-5 sm:p-8" onSubmit={(e) => void onConfirmJoin(e)}>
+          <h1 className="font-display text-3xl text-gold-300 sm:text-4xl">{dict.joinRoom}</h1>
+          <p className="text-sm text-[var(--muted)]">{dict.joinGateHint}</p>
+          <div>
+            <label className="mb-2 block text-sm text-[var(--muted)]">{dict.roomCode}</label>
+            <input
+              className="input-field uppercase tracking-widest"
+              value={code ?? ''}
+              readOnly
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm text-[var(--muted)]">{dict.nickname}</label>
+            <input
+              className="input-field"
+              placeholder={dict.enterNickname}
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              minLength={2}
+              maxLength={24}
+              required
+              autoFocus
+            />
+          </div>
+          {error && <p className="text-sm text-rose-300">{error}</p>}
+          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+            {dict.confirmJoin}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   if (!room) {
     return <p className="p-10 text-center">{dict.waiting}</p>;
   }
 
   if (room.status === 'playing' || room.status === 'finished') {
     if (!game) {
-      return <p className="p-10 text-center">Syncing game…</p>;
+      return (
+        <div className="mx-auto max-w-lg px-5 py-12 text-center">
+          <p className="text-[var(--muted)]">
+            {syncTimedOut ? dict.sessionExpired : dict.syncingGame}
+          </p>
+          {syncTimedOut && (
+            <button
+              type="button"
+              className="btn-primary mt-4"
+              onClick={() => {
+                setGame(null);
+                setSyncTimedOut(false);
+                recoveryAttemptedRef.current = false;
+                syncedRef.current = null;
+                if (code) {
+                  void api.getRoom(code).then((fresh) => setRoom(fresh));
+                  playAgain();
+                  reconnect(code);
+                  joinRoom(code);
+                }
+              }}
+            >
+              {dict.backToLobby}
+            </button>
+          )}
+        </div>
+      );
     }
     return (
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-6 lg:grid-cols-[1fr_320px]">
+      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[1fr_300px] lg:gap-4 lg:px-4 lg:py-4">
         <GameTable
           room={room}
           game={game}
@@ -106,78 +298,88 @@ export default function RoomPage() {
           onPass={() => pass()}
           onPlayAgain={() => playAgain()}
         />
-        <RoomChat messages={chat} onSend={sendChat} />
+        <div className="hidden lg:block">
+          <RoomChat messages={chat} onSend={sendChat} />
+        </div>
+        <MobileChatSheet messages={chat} onSend={sendChat} />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-5 py-10 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="panel p-6">
-        <h1 className="font-display text-4xl text-gold-300">
-          {dict.roomCode}: {room.code}
-        </h1>
-        <p className="mt-2 break-all text-sm text-[var(--muted)]">{room.inviteUrl}</p>
+    <div className="page-pad mx-auto max-w-6xl space-y-4 lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:gap-6 lg:space-y-0">
+      <div className="panel p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-[var(--muted)]">{dict.roomCode}</p>
+            <h1 className="font-display text-3xl tracking-wider text-gold-300 sm:text-4xl">{room.code}</h1>
+          </div>
+          {qrDataUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={qrDataUrl}
+              alt="Room QR"
+              className="h-24 w-24 rounded-2xl border border-[var(--border)] bg-white p-1.5 sm:h-32 sm:w-32"
+            />
+          )}
+        </div>
+        <p className="mt-2 break-all text-xs text-[var(--muted)] sm:text-sm">{room.inviteUrl}</p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary" onClick={() => void copyLink()}>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <button type="button" className="btn-secondary !min-h-[44px] text-sm" onClick={() => void copyLink()}>
             {dict.copyLink}
           </button>
           <button
             type="button"
-            className="btn-secondary"
+            className="btn-secondary !min-h-[44px] text-sm"
             onClick={downloadQr}
             disabled={!qrDataUrl}
           >
             {dict.downloadQr}
           </button>
           {isHost && (
-            <button type="button" className="btn-secondary" onClick={() => closeRoom()}>
+            <button type="button" className="btn-secondary col-span-2 !min-h-[44px] text-sm sm:col-span-1" onClick={() => closeRoom()}>
               {dict.closeRoom}
             </button>
           )}
         </div>
 
-        {qrDataUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={qrDataUrl}
-            alt="Room QR"
-            className="mt-6 h-48 w-48 rounded-xl border border-[var(--border)] bg-white p-2"
-          />
-        )}
-
-        <h2 className="mt-8 mb-3 font-display text-2xl text-gold-300">{dict.players}</h2>
-        <div className="space-y-3">
+        <h2 className="mt-6 mb-3 font-display text-xl text-gold-300 sm:text-2xl">{dict.players}</h2>
+        <div className="space-y-2 sm:space-y-3">
           {room.players.map((p) => (
             <div
               key={p.userId}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-black/20 px-4 py-3"
+              className="flex items-center justify-between gap-2 rounded-2xl border border-[var(--border)] bg-black/20 px-3 py-3 sm:px-4"
             >
-              <div>
-                <p className="font-semibold">
-                  {p.nickname} {p.isHost ? '· Host' : ''}
-                </p>
-                <p className="text-xs text-[var(--muted)]">
-                  {p.country} · {p.isReady ? 'Ready' : 'Not ready'} ·{' '}
-                  {p.isConnected ? 'Online' : 'Offline'}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-felt-700 text-sm font-bold text-gold-300">
+                  {p.nickname.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">
+                    {p.nickname} {p.isHost ? `· ${dict.host}` : ''}
+                  </p>
+                  <p className="truncate text-xs text-[var(--muted)]">
+                    {p.isReady ? dict.readyStatus : dict.notReady} ·{' '}
+                    {p.isConnected ? dict.online : dict.offline}
+                  </p>
+                </div>
               </div>
               {isHost && p.userId !== user.id && (
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
-                    className="btn-secondary !px-3 !py-1 text-xs"
+                    className="btn-ghost !min-h-[36px] !px-2 text-xs"
                     onClick={() => kick(p.userId)}
                   >
                     {dict.kick}
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary !px-3 !py-1 text-xs"
+                    className="btn-ghost !min-h-[36px] !px-2 text-xs"
                     onClick={() => transferHost(p.userId)}
                   >
-                    {dict.transferHost}
+                    Host
                   </button>
                 </div>
               )}
@@ -185,10 +387,10 @@ export default function RoomPage() {
           ))}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="sticky bottom-[calc(var(--mobile-nav-h)+env(safe-area-inset-bottom)+0.5rem)] mt-6 flex gap-3 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent pb-2 pt-4 md:static md:bg-transparent md:p-0">
           <button
             type="button"
-            className="btn-secondary"
+            className="btn-secondary flex-1"
             onClick={() => setReady(!me?.isReady)}
           >
             {me?.isReady ? dict.unready : dict.ready}
@@ -196,7 +398,7 @@ export default function RoomPage() {
           {isHost && (
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary flex-1"
               disabled={!canStart}
               onClick={() => startGame()}
             >
@@ -206,7 +408,10 @@ export default function RoomPage() {
         </div>
       </div>
 
-      <RoomChat messages={chat} onSend={sendChat} />
+      <div className="hidden md:block">
+        <RoomChat messages={chat} onSend={sendChat} />
+      </div>
+      <MobileChatSheet messages={chat} onSend={sendChat} />
     </div>
   );
 }

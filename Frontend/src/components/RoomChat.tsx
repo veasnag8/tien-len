@@ -10,21 +10,33 @@ const EMOJIS = ['👍', '🔥', '😂', '😮', '👏', '😎', '🃏', '🏆'];
 interface RoomChatProps {
   messages: ChatMessage[];
   onSend: (content: string, isEmoji?: boolean) => void;
+  mobile?: boolean;
 }
 
-export function RoomChat({ messages, onSend }: RoomChatProps) {
+export function RoomChat({ messages, onSend, mobile }: RoomChatProps) {
   const [text, setText] = useState('');
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
   return (
-    <div className="panel flex h-72 flex-col overflow-hidden md:h-full">
-      <div className="border-b border-[var(--border)] px-4 py-3 font-semibold">{dict.chat}</div>
+    <div
+      className={
+        mobile
+          ? 'flex h-full min-h-[40dvh] flex-col'
+          : 'panel flex h-72 flex-col overflow-hidden md:h-full'
+      }
+    >
+      {!mobile && (
+        <div className="border-b border-[var(--border)] px-4 py-3 font-semibold">{dict.chat}</div>
+      )}
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3 text-sm">
+        {messages.length === 0 && (
+          <p className="py-6 text-center text-xs text-[var(--muted)]">{dict.chat}…</p>
+        )}
         {messages.map((m) => (
-          <div key={m.id}>
-            <span className="text-gold-300">{m.nickname}: </span>
-            <span className={m.isEmoji ? 'text-xl' : 'text-[var(--muted)]'}>{m.content}</span>
+          <div key={m.id} className="rounded-xl bg-black/15 px-3 py-2">
+            <span className="text-xs font-semibold text-gold-300">{m.nickname}</span>
+            <p className={m.isEmoji ? 'text-2xl' : 'text-[var(--muted)]'}>{m.content}</p>
           </div>
         ))}
       </div>
@@ -33,7 +45,7 @@ export function RoomChat({ messages, onSend }: RoomChatProps) {
           <button
             key={e}
             type="button"
-            className="rounded-lg px-2 py-1 hover:bg-white/5"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-lg active:bg-white/10"
             onClick={() => onSend(e, true)}
           >
             {e}
@@ -54,11 +66,12 @@ export function RoomChat({ messages, onSend }: RoomChatProps) {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="flex-1 rounded-lg border border-[var(--border)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-gold-400"
+          className="input-field !min-h-[44px] flex-1 !rounded-xl !py-2 text-sm"
           maxLength={200}
+          placeholder={dict.chat}
         />
-        <button type="submit" className="btn-primary !px-3 !py-2 text-sm">
-          Send
+        <button type="submit" className="btn-primary !min-h-[44px] !rounded-xl !px-4 !py-2 text-sm">
+          {dict.send}
         </button>
       </form>
     </div>
