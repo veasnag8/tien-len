@@ -1,6 +1,6 @@
-# Tiến Lên Miền Nam — Online Multiplayer
+# ទៀនលើន · Tien Len — Online Multiplayer
 
-Production-quality realtime multiplayer Tiến Lên Miền Nam (Southern Vietnamese card game).
+Production-quality realtime multiplayer Tien Len (Khmer & English UI).
 
 ## Stack
 
@@ -22,65 +22,23 @@ Docs/       Architecture & ops docs
 nginx/      Reverse proxy config
 ```
 
-## Quick start (local)
-
-1. Copy env file:
-
-```bash
-cp .env.example .env
-```
-
-2. Start Postgres + Redis:
-
-```bash
-docker compose up -d postgres redis
-```
-
-3. Install & build shared packages:
+## Quick start (no Docker)
 
 ```bash
 npm install
 npm run build -w Shared
 npm run build -w Socket
+npm run dev:local
 ```
 
-4. Migrate database:
+App: http://localhost:3000
 
-```bash
-cd Backend
-npx prisma migrate deploy --schema=../Database/schema.prisma
-npx prisma generate --schema=../Database/schema.prisma
-cd ..
-```
-
-5. Run apps:
-
-```bash
-npm run dev:backend
-npm run dev:frontend
-```
-
-- Web: http://localhost:3000
-- API: http://localhost:4000/api/health
-
-## Full Docker deploy
+## Quick start (Docker)
 
 ```bash
 cp .env.example .env
-# set JWT_SECRET and OAuth keys in .env
 docker compose up -d --build
 ```
-
-App: http://localhost
-
-## Demo account (after seed)
-
-```bash
-npm run db:seed
-```
-
-- Email: `demo@tienlen.app`
-- Password: `Password123!`
 
 ## Security model
 
