@@ -4,6 +4,7 @@ import { Providers } from '@/components/Providers';
 import { SiteHeader } from '@/components/SiteHeader';
 import { MobileNav } from '@/components/MobileNav';
 import { AppShell } from '@/components/AppShell';
+import { LandscapeGate } from '@/components/LandscapeGate';
 import { APP_NAME, APP_NAME_EN } from '@/lib/config';
 
 export const metadata: Metadata = {
@@ -30,9 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="km" suppressHydrationWarning>
       <body className="min-h-dvh bg-hero-mesh antialiased">
         <Providers>
-          <SiteHeader />
-          <AppShell>{children}</AppShell>
-          <MobileNav />
+          <LandscapeGate>
+            <SiteHeader />
+            <AppShell>{children}</AppShell>
+            <MobileNav />
+          </LandscapeGate>
         </Providers>
       </body>
     </html>

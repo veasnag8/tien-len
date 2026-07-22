@@ -77,6 +77,9 @@ const dictionaries = {
     playerCountHint: '2 to 4 players can join a room.',
     playersCount: '{current} / {max} players',
     startMinPlayers: 'At least 2 players required to start.',
+    rotateTitle: 'Rotate your phone',
+    rotateHint: 'This game is designed for landscape (horizontal) mode. Please turn your phone sideways.',
+    rotateAction: 'Lock landscape',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -154,6 +157,9 @@ const dictionaries = {
     playerCountHint: 'អាចចូលលេងបានចាប់ពី ២ នាក់ឡើងទៅ ៤ នាក់។',
     playersCount: '{current} / {max} នាក់',
     startMinPlayers: 'ត្រូវការយ៉ាងហោចណាស់ ២ នាក់ដើម្បីចាប់ផ្តើម។',
+    rotateTitle: 'បង្វិលទូរស័ព្ទ',
+    rotateHint: 'ហ្គេមនេះរចនាសម្រាប់របៀបផ្តេក (landscape)។ សូមបង្វិលទូរស័ព្ទទៅផ្នែកខាង។',
+    rotateAction: 'ចាក់សោផ្តេក',
   },
 } as const;
 

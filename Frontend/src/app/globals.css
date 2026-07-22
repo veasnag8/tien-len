@@ -96,3 +96,38 @@ html[lang='en'] .font-display {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Phone landscape — compact chrome for card table */
+@media (max-width: 900px) and (orientation: landscape) {
+  :root {
+    --header-h: 2.75rem;
+    --mobile-nav-h: 3.25rem;
+  }
+
+  .page-pad {
+    @apply px-3 py-3;
+  }
+
+  .landscape-gate-icon {
+    animation: landscape-tilt 1.4s ease-in-out infinite;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  body {
+    overflow: hidden;
+  }
+}
+
+@keyframes landscape-tilt {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(90deg);
+  }
+  60% {
+    transform: rotate(90deg);
+  }
+}
