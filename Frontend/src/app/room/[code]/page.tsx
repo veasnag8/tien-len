@@ -336,7 +336,7 @@ export default function RoomPage() {
       );
     }
     return (
-      <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-[1fr_300px] lg:gap-4 lg:px-4 lg:py-4">
+      <div className="fixed inset-0 z-10 md:relative md:inset-auto md:mx-auto md:max-w-7xl md:px-4 md:py-4 lg:grid lg:grid-cols-[1fr_280px] lg:gap-4">
         <GameTable
           room={room}
           game={game}
@@ -347,7 +347,9 @@ export default function RoomPage() {
         <div className="hidden lg:block">
           <RoomChat messages={chat} onSend={sendChat} />
         </div>
-        <MobileChatSheet messages={chat} onSend={sendChat} />
+        <div className="md:hidden">
+          <MobileChatSheet messages={chat} onSend={sendChat} />
+        </div>
       </div>
     );
   }

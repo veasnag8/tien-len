@@ -32,7 +32,7 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
     <>
       <button
         type="button"
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500 text-lg font-bold text-ink-900 shadow-glow md:hidden"
+        className="mobile-chat-fab fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500 text-lg font-bold text-ink-900 shadow-glow md:hidden"
         onClick={() => setOpen(true)}
         aria-label={dict.chat}
       >

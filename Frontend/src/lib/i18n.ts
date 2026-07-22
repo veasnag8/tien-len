@@ -80,6 +80,7 @@ const dictionaries = {
     rotateTitle: 'Rotate your phone',
     rotateHint: 'This game is designed for landscape (horizontal) mode. Please turn your phone sideways.',
     rotateAction: 'Lock landscape',
+    youLabel: 'You',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -160,6 +161,7 @@ const dictionaries = {
     rotateTitle: 'បង្វិលទូរស័ព្ទ',
     rotateHint: 'ហ្គេមនេះរចនាសម្រាប់របៀបផ្តេក (landscape)។ សូមបង្វិលទូរស័ព្ទទៅផ្នែកខាង។',
     rotateAction: 'ចាក់សោផ្តេក',
+    youLabel: 'អ្នក',
   },
 } as const;
 

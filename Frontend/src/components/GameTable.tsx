@@ -18,8 +18,76 @@ interface GameTableProps {
   onPlayAgain: () => void;
 }
 
-function opponentInitial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || '?';
+type SeatSlot = 'top' | 'left' | 'right';
+
+function relativeSlot(relativeIndex: number, playerCount: number): SeatSlot | null {
+  // relativeIndex 1..n-1 with me at 0 (bottom)
+  if (playerCount === 2) {
+    return relativeIndex === 1 ? 'top' : null;
+  }
+  if (playerCount === 3) {
+    if (relativeIndex === 1) return 'left';
+    if (relativeIndex === 2) return 'right';
+    return null;
+  }
+  // 4 players
+  if (relativeIndex === 1) return 'left';
+  if (relativeIndex === 2) return 'top';
+  if (relativeIndex === 3) return 'right';
+  return null;
+}
+
+function OpponentFan({
+  name,
+  handCount,
+  isTurn,
+  slot,
+}: {
+  name: string;
+  handCount: number;
+  isTurn: boolean;
+  slot: SeatSlot;
+}) {
+  const shown = Math.min(handCount, slot === 'top' ? 10 : 8);
+  const vertical = slot === 'left' || slot === 'right';
+
+  return (
+    <div
+      className={`flex items-center gap-2 ${
+        slot === 'top' ? 'flex-col' : slot === 'left' ? 'flex-row' : 'flex-row-reverse'
+      } ${isTurn ? 'drop-shadow-[0_0_12px_rgba(224,184,74,0.55)]' : ''}`}
+    >
+      <div className="rounded-lg bg-black/35 px-2 py-1 text-center backdrop-blur-sm">
+        <p className="max-w-[5.5rem] truncate text-[11px] font-semibold text-white sm:text-xs">{name}</p>
+        <p className="text-[10px] tabular-nums text-emerald-200/90">{handCount}</p>
+      </div>
+      <div
+        className={`relative flex ${vertical ? 'h-[7.5rem] w-12 flex-col items-center' : 'h-14 items-end'}`}
+      >
+        {Array.from({ length: shown }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute"
+            style={
+              vertical
+                ? {
+                    top: `${i * 9}px`,
+                    transform: `rotate(${slot === 'left' ? -8 : 8}deg)`,
+                    zIndex: i,
+                  }
+                : {
+                    left: `${i * 11}px`,
+                    transform: `rotate(${(i - shown / 2) * 2.2}deg)`,
+                    zIndex: i,
+                  }
+            }
+          >
+            <CardBack mini />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTableProps) {
@@ -30,116 +98,190 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTable
   const dict = t(locale);
 
   const me = game.players.find((p) => p.userId === user?.id);
+  const mySeat = me?.seatIndex ?? 0;
   const isMyTurn = me?.seatIndex === game.currentTurnSeat && game.phase === 'playing';
   const secondsLeft = useCountdown(game.turnDeadline);
 
-  const opponents = game.players.filter((p) => p.userId !== user?.id);
   const finished = game.phase === 'finished';
   const iWon = finished && game.rankings[0] === user?.id;
   const handCount = game.hand.length;
-  const fanSpread = Math.min(28, Math.max(12, 320 / Math.max(handCount, 1)));
+  const fanSpread = Math.min(22, Math.max(10, 280 / Math.max(handCount, 1)));
+
+  const seats: Partial<Record<SeatSlot, (typeof game.players)[0]>> = {};
+  for (const p of game.players) {
+    if (p.userId === user?.id) continue;
+    const rel = (p.seatIndex - mySeat + game.playerCount) % game.playerCount;
+    const slot = relativeSlot(rel, game.playerCount);
+    if (slot) seats[slot] = p;
+  }
+
+  const recentPile = game.pile.slice(-8);
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-var(--header-h)-1rem)] flex-col overflow-hidden rounded-none border-0 bg-felt-radial md:min-h-0 md:rounded-3xl md:border md:border-[var(--border)]">
+    <div className="game-table relative h-[100dvh] w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#0d6b5c_0%,#064e45_45%,#03352f_100%)] md:h-[min(100dvh,820px)] md:rounded-3xl md:border md:border-[var(--border)]">
       <ConfettiBurst active={Boolean(finished && iWon)} />
 
-      <div className="flex items-center justify-between gap-2 px-3 pt-3 md:px-6 md:pt-6">
-        <div className="min-w-0">
-          <p className="truncate text-xs text-[var(--muted)] md:text-sm">
-            R{game.roundNumber} · {room.code}
-          </p>
-          <h2 className="font-display truncate text-xl text-gold-300 md:text-3xl">
-            {finished ? dict.winner : isMyTurn ? dict.yourTurn : dict.brand}
-          </h2>
-        </div>
-        {secondsLeft !== null && game.phase === 'playing' && (
+      {/* Timer chip — top left */}
+      <div className="absolute left-2 top-2 z-20 sm:left-4 sm:top-3">
+        {secondsLeft !== null && game.phase === 'playing' ? (
           <div
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-bold tabular-nums md:px-4 md:py-2 ${
+            className={`flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold tabular-nums shadow-lg ${
               secondsLeft <= 5
-                ? 'animate-pulse border-crimson/60 bg-crimson/20 text-rose-200'
-                : 'border-gold-500/40 text-gold-300'
+                ? 'animate-pulse border-rose-300 bg-rose-600 text-white'
+                : 'border-sky-200/80 bg-gradient-to-b from-sky-500 to-sky-700 text-white'
             }`}
           >
-            {secondsLeft}s
+            {secondsLeft}
+          </div>
+        ) : (
+          <div className="rounded-full bg-black/40 px-2 py-1 text-[10px] text-white/80 backdrop-blur">
+            {room.code}
           </div>
         )}
       </div>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto px-3 pb-2 md:mt-6 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:px-6">
-        {opponents.map((p) => {
-          const info = room.players.find((r) => r.userId === p.userId);
-          const name = info?.nickname ?? 'Player';
-          const isTheirTurn =
-            p.seatIndex === game.currentTurnSeat && game.phase === 'playing';
-          return (
-            <div
-              key={p.userId}
-              className={`chip shrink-0 md:block md:rounded-2xl md:p-3 ${isTheirTurn ? 'border-gold-400/60 bg-gold-500/10' : ''}`}
-            >
-              <div className="flex items-center gap-2 md:mb-2 md:justify-between">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-felt-700 text-sm font-bold text-gold-300 md:hidden">
-                  {opponentInitial(name)}
+      {/* Scoreboard — top right */}
+      <div className="absolute right-2 top-2 z-20 min-w-[7.5rem] rounded-xl border border-white/15 bg-black/45 px-2.5 py-1.5 text-[11px] backdrop-blur-md sm:right-4 sm:top-3 sm:min-w-[9rem] sm:text-xs">
+        {game.players
+          .slice()
+          .sort((a, b) => a.seatIndex - b.seatIndex)
+          .map((p) => {
+            const info = room.players.find((r) => r.userId === p.userId);
+            const name =
+              p.userId === user?.id ? dict.youLabel : (info?.nickname ?? 'P');
+            const turn = p.seatIndex === game.currentTurnSeat && game.phase === 'playing';
+            return (
+              <div
+                key={p.userId}
+                className={`flex items-baseline justify-between gap-2 py-0.5 ${
+                  turn ? 'text-amber-300' : 'text-white/90'
+                }`}
+              >
+                <span className="max-w-[4.5rem] truncate font-medium">{name}</span>
+                <span className="tabular-nums">
+                  <span className="text-sm font-bold sm:text-base">{p.handCount}</span>
+                  {p.placement != null && (
+                    <span className="ml-1 text-[10px] text-emerald-300">#{p.placement}</span>
+                  )}
                 </span>
-                <div className="min-w-0 md:flex-1">
-                  <p className="truncate text-sm font-semibold">{name}</p>
-                  <p className="text-[10px] text-[var(--muted)] md:text-xs">
-                    {p.handCount} {dict.cards}
-                  </p>
-                </div>
               </div>
-              <div className="hidden md:flex md:-space-x-8 md:overflow-hidden">
-                {Array.from({ length: Math.min(p.handCount, 8) }).map((_, i) => (
-                  <CardBack key={i} compact />
-                ))}
-              </div>
-              {p.placement && (
-                <p className="mt-1 text-gold-300 md:mt-2">#{p.placement}</p>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
-      <div className="flex min-h-[7rem] flex-1 flex-wrap items-center justify-center gap-1.5 px-2 py-4 md:min-h-32 md:gap-2 md:px-6">
-        <AnimatePresence>
-          {game.pile.slice(-6).map((card) => (
-            <motion.div
-              key={`${card.id}-${game.pile.length}`}
-              initial={{ y: 40, opacity: 0, scale: 0.8 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
+      {/* Top opponent */}
+      {seats.top && (
+        <div className="absolute left-1/2 top-2 z-10 -translate-x-1/2 sm:top-3">
+          <OpponentFan
+            name={room.players.find((r) => r.userId === seats.top!.userId)?.nickname ?? 'Player'}
+            handCount={seats.top.handCount}
+            isTurn={seats.top.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            slot="top"
+          />
+        </div>
+      )}
+
+      {/* Left opponent */}
+      {seats.left && (
+        <div className="absolute left-1 top-1/2 z-10 -translate-y-1/2 sm:left-3">
+          <OpponentFan
+            name={room.players.find((r) => r.userId === seats.left!.userId)?.nickname ?? 'Player'}
+            handCount={seats.left.handCount}
+            isTurn={seats.left.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            slot="left"
+          />
+        </div>
+      )}
+
+      {/* Right opponent */}
+      {seats.right && (
+        <div className="absolute right-1 top-1/2 z-10 -translate-y-1/2 sm:right-3">
+          <OpponentFan
+            name={room.players.find((r) => r.userId === seats.right!.userId)?.nickname ?? 'Player'}
+            handCount={seats.right.handCount}
+            isTurn={seats.right.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            slot="right"
+          />
+        </div>
+      )}
+
+      {/* Center table — pile + actions */}
+      <div className="absolute inset-0 z-[5] flex items-center justify-center px-16 sm:px-24">
+        <div className="flex w-full max-w-xl items-center justify-center gap-3 sm:gap-6">
+          {game.phase === 'playing' ? (
+            <button
+              type="button"
+              className="btn-table-play"
+              disabled={!isMyTurn || selectedCardIds.length === 0}
+              onClick={onPlay}
             >
-              <PlayingCard card={card} disabled mini />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {game.pile.length === 0 && (
-          <p className="px-4 text-center text-xs text-[var(--muted)] md:text-sm">{dict.freePlay}</p>
-        )}
+              {dict.playCards}
+            </button>
+          ) : (
+            <span className="w-20 sm:w-24" />
+          )}
+
+          <div className="relative flex min-h-[5.5rem] min-w-[8rem] flex-col items-center justify-center sm:min-h-[6.5rem]">
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              <AnimatePresence mode="popLayout">
+                {recentPile.map((card) => (
+                  <motion.div
+                    key={`${card.id}-${game.pile.indexOf(card)}`}
+                    initial={{ y: 28, opacity: 0, scale: 0.85 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                  >
+                    <PlayingCard card={card} disabled mini />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+            {game.pile.length === 0 && game.phase === 'playing' && (
+              <p className="text-center text-[11px] text-emerald-100/70">{dict.freePlay}</p>
+            )}
+            {isMyTurn && game.phase === 'playing' && (
+              <p className="mt-1 text-[10px] font-semibold text-amber-200">{dict.yourTurn}</p>
+            )}
+          </div>
+
+          {game.phase === 'playing' ? (
+            <button
+              type="button"
+              className="btn-table-pass"
+              disabled={!isMyTurn || !game.currentCombination}
+              onClick={onPass}
+            >
+              {dict.pass}
+            </button>
+          ) : (
+            <button type="button" className="btn-table-play !px-4" onClick={onPlayAgain}>
+              {dict.playAgain}
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="relative px-2 pb-28 md:px-4 md:pb-4">
-        <div className="mx-auto flex max-w-2xl justify-center">
+      {/* My hand — bottom */}
+      <div className="absolute inset-x-0 bottom-0 z-20 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto flex max-w-3xl justify-center px-2">
           {game.hand.map((card, index) => {
             const selected = selectedCardIds.includes(card.id);
             const center = (handCount - 1) / 2;
             const offset = index - center;
-            const rotate = offset * (handCount > 10 ? 2.5 : 3.5);
+            const rotate = offset * (handCount > 10 ? 2.2 : 3);
             return (
               <motion.div
                 key={card.id}
                 className="relative shrink-0"
                 style={{
-                  marginLeft: index === 0 ? 0 : `-${fanSpread * 0.55}px`,
-                  zIndex: selected ? 50 : index,
+                  marginLeft: index === 0 ? 0 : `-${fanSpread * 0.58}px`,
+                  zIndex: selected ? 60 : index,
                 }}
-                initial={{ y: -60, opacity: 0 }}
                 animate={{
-                  y: selected ? -22 : 0,
-                  opacity: 1,
+                  y: selected ? -18 : 0,
                   rotate,
                 }}
-                transition={{ delay: index * 0.02 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 28 }}
               >
                 <PlayingCard
                   card={card}
@@ -154,49 +296,15 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTable
         </div>
       </div>
 
-      <div className="game-action-bar md:relative md:mt-2">
-        <div className="mx-auto flex max-w-lg gap-3 md:justify-center">
-          {game.phase === 'playing' ? (
-            <>
-              <button
-                type="button"
-                className="btn-primary min-h-[52px] flex-1 text-lg md:flex-none md:px-8"
-                disabled={!isMyTurn || selectedCardIds.length === 0}
-                onClick={onPlay}
-              >
-                {dict.playCards}
-                {selectedCardIds.length > 0 && (
-                  <span className="ml-2 rounded-full bg-ink-900/25 px-2 py-0.5 text-sm">
-                    {selectedCardIds.length}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary min-h-[52px] flex-1 md:flex-none md:px-8"
-                disabled={!isMyTurn || !game.currentCombination}
-                onClick={onPass}
-              >
-                {dict.pass}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn-primary min-h-[52px] w-full md:w-auto" onClick={onPlayAgain}>
-              {dict.playAgain}
-            </button>
-          )}
-        </div>
-      </div>
-
       {finished && (
-        <div className="mx-3 mb-4 panel p-4 md:mx-6">
-          <h3 className="mb-2 font-display text-xl text-gold-300 md:text-2xl">{dict.rankings}</h3>
-          <ol className="space-y-1 text-sm md:text-base">
+        <div className="absolute inset-x-4 bottom-24 z-30 mx-auto max-w-sm rounded-2xl border border-white/20 bg-black/75 p-4 backdrop-blur-md sm:bottom-28">
+          <h3 className="mb-2 font-display text-lg text-amber-300">{dict.rankings}</h3>
+          <ol className="space-y-1 text-sm text-white">
             {game.rankings.map((uid, i) => {
               const info = room.players.find((p) => p.userId === uid);
               return (
                 <li key={uid} className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-500/20 text-xs text-gold-300">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/25 text-xs text-amber-200">
                     {i + 1}
                   </span>
                   {info?.nickname ?? uid}

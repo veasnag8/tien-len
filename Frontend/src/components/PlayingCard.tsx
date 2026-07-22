@@ -60,8 +60,16 @@ export function PlayingCard({
 export function CardBack({ compact, mini }: { compact?: boolean; mini?: boolean }) {
   const size = mini ? sizeClasses.mini : compact ? sizeClasses.compact : sizeClasses.default;
   return (
-    <div className={clsx('rounded-xl border border-felt-700 bg-gradient-to-br from-felt-800 to-felt-950 shadow-card', size)}>
-      <div className="m-1 h-[calc(100%-0.5rem)] rounded-lg border border-gold-500/30 bg-[repeating-linear-gradient(135deg,rgba(212,160,23,0.15)_0_6px,transparent_6px_12px)]" />
+    <div
+      className={clsx(
+        'overflow-hidden rounded-xl border-2 border-sky-900/80 shadow-card',
+        'bg-gradient-to-br from-sky-600 via-blue-700 to-blue-950',
+        size,
+      )}
+    >
+      <div className="m-[3px] flex h-[calc(100%-6px)] items-center justify-center rounded-lg border border-sky-300/25 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_45%),repeating-linear-gradient(135deg,rgba(255,255,255,0.08)_0_5px,transparent_5px_10px)]">
+        <span className="text-[10px] font-bold tracking-wider text-sky-100/80">TL</span>
+      </div>
     </div>
   );
 }
