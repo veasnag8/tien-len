@@ -38,7 +38,7 @@ Phone → Vercel (website)
 |-------|--------|
 | Root Directory | *(leave empty — repo root)* |
 | Runtime | Node |
-| Build Command | `npm install && npm run build -w Shared && npm run build -w Socket && npm run prisma:generate -w Backend && npm run build -w Backend` |
+| Build Command | `NPM_CONFIG_PRODUCTION=false npm install && npm run build -w Shared && npm run build -w Socket && npm run prisma:generate -w Backend && npm run build -w Backend` |
 | Start Command | `npm run start:cloud -w Backend` |
 | Instance | **Free** |
 
@@ -56,8 +56,32 @@ FRONTEND_URL=https://YOUR_VERCEL_APP.vercel.app
 
 5. After first deploy, copy the backend URL, e.g. `https://tienlen-api.onrender.com`
 
-> Free Render **sleeps** after ~15 min idle. First open can take 30–60s.  
-> Optional: https://cron-job.org → ping `https://YOUR_BACKEND/api/health` every 10 minutes.
+---
+
+## 3b. Keep Render awake ([cron-job.org](https://cron-job.org/en/))
+
+Free Render **sleeps** after ~15 minutes idle. Ping health every **10 minutes** so friends can join without waiting 30–60s.
+
+1. Open https://cron-job.org/en/ → **Sign up** (free) → Login  
+2. **Cronjobs** → **Create cronjob**  
+3. Fill:
+
+| Field | Value |
+|-------|--------|
+| Title | `tienlen-wake` |
+| URL | `https://YOUR_BACKEND.onrender.com/api/health` |
+| Schedule | Every **10 minutes** (or custom: `*/10 * * * *`) |
+| Request method | **GET** |
+| Enable job | ✅ On |
+
+4. **Create** → optional **Test run** once (should get HTTP 200)  
+5. Leave it enabled — cron-job.org is free and keeps pinging automatically  
+
+Example URL shape (replace with yours):
+
+```text
+https://tienlen-api.onrender.com/api/health
+```
 
 ---
 
