@@ -67,6 +67,8 @@ export function GameHelpButton() {
               <li>• {dict.rule4}</li>
               <li>• {dict.rule5}</li>
               <li>• {dict.rule6}</li>
+              <li>• {dict.rule7}</li>
+              <li>• {dict.rule8}</li>
             </ul>
 
             <button type="button" className="btn-primary mt-5 w-full" onClick={() => setOpen(false)}>

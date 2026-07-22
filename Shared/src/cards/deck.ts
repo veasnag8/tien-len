@@ -1,3 +1,4 @@
+import { GAME_CONSTANTS } from '../constants';
 import { Card, Rank, Suit, createCard } from './types';
 
 const ALL_RANKS: Rank[] = [
@@ -45,9 +46,10 @@ export function dealCards(
 ): Card[][] {
   const deck = shuffleDeck(createDeck(), random);
   const hands: Card[][] = Array.from({ length: playerCount }, () => []);
-  const cardsPerPlayer = Math.floor(52 / playerCount);
+  const cardsPerPlayer = GAME_CONSTANTS.HAND_SIZE;
+  const total = cardsPerPlayer * playerCount;
 
-  for (let i = 0; i < cardsPerPlayer * playerCount; i += 1) {
+  for (let i = 0; i < total; i += 1) {
     hands[i % playerCount]!.push(deck[i]!);
   }
 

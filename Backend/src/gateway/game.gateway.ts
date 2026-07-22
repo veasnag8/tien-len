@@ -224,7 +224,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const roomId = data.roomId;
     this.clearTurnTimer(roomId);
-    await this.game.clearGame(roomId);
+    await this.game.clearSession(roomId);
     await this.rooms.closeRoom(data.userId, roomId);
     this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, { roomId });
     this.server.in(roomId).socketsLeave(roomId);

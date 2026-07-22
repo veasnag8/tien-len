@@ -1,6 +1,8 @@
 export const GAME_CONSTANTS = {
   MIN_PLAYERS: 2,
   MAX_PLAYERS: 4,
+  /** Always deal this many cards per player (2–4 players); leftover deck unused. */
+  HAND_SIZE: 13,
   TURN_TIMEOUT_MS: 30_000,
   ROOM_CODE_LENGTH: 6,
   MAX_NICKNAME_LENGTH: 24,

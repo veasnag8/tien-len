@@ -313,6 +313,9 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
 
       {finished && (
         <div className="absolute inset-x-4 bottom-24 z-30 mx-auto max-w-sm rounded-2xl border border-white/20 bg-black/75 p-4 backdrop-blur-md sm:bottom-28">
+          {game.winReason === 'four_twos' && (
+            <p className="mb-2 text-center text-sm font-semibold text-amber-200">{dict.explodeWin}</p>
+          )}
           <h3 className="mb-2 font-display text-lg text-amber-300">{dict.rankings}</h3>
           <ol className="space-y-1 text-sm text-white">
             {game.rankings.map((uid, i) => {

@@ -1,4 +1,4 @@
-import { Card, sortCards } from '../cards/types';
+import { Card, Rank, sortCards } from '../cards/types';
 import { dealCards, findThreeOfSpadesHolder } from '../cards/deck';
 import {
   Combination,
@@ -21,6 +21,8 @@ export interface PlayerGameState {
   isConnected: boolean;
 }
 
+export type WinReason = 'empty_hand' | 'four_twos';
+
 export interface PublicGameState {
   roomId: string;
   phase: GamePhase;
@@ -35,6 +37,8 @@ export interface PublicGameState {
   rankings: string[];
   allowFiveConsecutivePairs: boolean;
   roundNumber: number;
+  /** Why the game ended; set when phase is finished. */
+  winReason: WinReason | null;
 }
 
 export interface PrivateGameState extends PublicGameState {
@@ -66,6 +70,12 @@ export interface InternalGameState {
   allowFiveConsecutivePairs: boolean;
   roundNumber: number;
   finishedCount: number;
+  winReason: WinReason | null;
+}
+
+/** ផ្ទុះ — all four rank-2 cards in one hand → instant win. */
+export function hasFourTwos(hand: Card[]): boolean {
+  return hand.filter((c) => c.rank === Rank.Two).length === 4;
 }
 
 export type MoveResult =
@@ -78,6 +88,8 @@ export function createGame(
   allowFiveConsecutivePairs: boolean = true,
   random: () => number = Math.random,
   turnTimeoutMs: number = GAME_CONSTANTS.TURN_TIMEOUT_MS,
+  /** Previous winner leads next game; omit on first game so 3♠ opens. */
+  leadUserId?: string | null,
 ): InternalGameState {
   const playerCount = userIds.length as 2 | 3 | 4;
   if (playerCount < GAME_CONSTANTS.MIN_PLAYERS || playerCount > GAME_CONSTANTS.MAX_PLAYERS) {
@@ -86,7 +98,11 @@ export function createGame(
 
   const timeoutMs = turnTimeoutMs > 0 ? turnTimeoutMs : GAME_CONSTANTS.TURN_TIMEOUT_MS;
   const hands = dealCards(playerCount, random);
-  const firstSeat = findThreeOfSpadesHolder(hands);
+
+  const leadFromPrevious =
+    leadUserId != null ? userIds.findIndex((id) => id === leadUserId) : -1;
+  const firstSeat =
+    leadFromPrevious >= 0 ? leadFromPrevious : findThreeOfSpadesHolder(hands);
 
   const players: InternalPlayerState[] = userIds.map((userId, seatIndex) => ({
     userId,
@@ -97,7 +113,7 @@ export function createGame(
     isConnected: true,
   }));
 
-  return {
+  const state: InternalGameState = {
     roomId,
     phase: 'playing',
     playerCount,
@@ -113,7 +129,37 @@ export function createGame(
     allowFiveConsecutivePairs,
     roundNumber: 1,
     finishedCount: 0,
+    winReason: null,
   };
+
+  applyFourTwosInstantWin(state);
+  return state;
+}
+
+function applyFourTwosInstantWin(state: InternalGameState): void {
+  const winnerSeat = state.players.findIndex((p) => hasFourTwos(p.hand));
+  if (winnerSeat < 0) {
+    return;
+  }
+
+  const winner = state.players[winnerSeat]!;
+  winner.hasFinished = true;
+  winner.placement = 1;
+  state.rankings = [winner.userId];
+  state.finishedCount = 1;
+  state.winReason = 'four_twos';
+  state.phase = 'finished';
+  state.turnDeadline = null;
+
+  for (const player of state.players) {
+    if (player.seatIndex === winnerSeat) {
+      continue;
+    }
+    player.hasFinished = true;
+    state.finishedCount += 1;
+    player.placement = state.finishedCount;
+    state.rankings.push(player.userId);
+  }
 }
 
 function activeSeats(state: InternalGameState): number[] {
@@ -168,9 +214,11 @@ function markFinished(state: InternalGameState, seat: number): void {
     state.finishedCount += 1;
     state.phase = 'finished';
     state.turnDeadline = null;
+    state.winReason = state.winReason ?? 'empty_hand';
   } else if (remaining.length === 0) {
     state.phase = 'finished';
     state.turnDeadline = null;
+    state.winReason = state.winReason ?? 'empty_hand';
   }
 }
 
@@ -313,6 +361,7 @@ export function toPublicState(state: InternalGameState): PublicGameState {
     rankings: [...state.rankings],
     allowFiveConsecutivePairs: state.allowFiveConsecutivePairs,
     roundNumber: state.roundNumber,
+    winReason: state.winReason,
   };
 }
 

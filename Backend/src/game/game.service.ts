@@ -35,6 +35,10 @@ export class GameService {
     return `game:${roomId}`;
   }
 
+  private lastWinnerKey(roomId: string): string {
+    return `game:${roomId}:lastWinner`;
+  }
+
   private requestKey(requestId: string): string {
     return `req:${requestId}`;
   }
@@ -55,16 +59,21 @@ export class GameService {
     }
 
     const ordered = [...room.players].sort((a, b) => a.seatIndex - b.seatIndex);
+    const lastWinner = await this.redis.get(this.lastWinnerKey(roomId));
     const state = createGame(
       roomId,
       ordered.map((p) => p.userId),
       room.settings.allowFiveConsecutivePairs,
       Math.random,
       room.settings.turnTimeoutMs ?? 30_000,
+      lastWinner,
     );
 
     await this.saveState(state);
-    await this.rooms.setStatus(roomId, RoomStatus.playing);
+    await this.rooms.setStatus(
+      roomId,
+      state.phase === 'finished' ? RoomStatus.finished : RoomStatus.playing,
+    );
 
     if (!isLiteMode()) {
       await this.prisma.game.create({
@@ -74,6 +83,10 @@ export class GameService {
           stateJson: toPublicState(state) as object,
         },
       });
+    }
+
+    if (state.phase === 'finished') {
+      await this.finalizeGame(state);
     }
 
     return this.snapshot(state);
@@ -154,8 +167,17 @@ export class GameService {
     await this.redis.del(this.gameKey(roomId));
   }
 
+  async clearSession(roomId: string): Promise<void> {
+    await this.redis.del(this.gameKey(roomId));
+    await this.redis.del(this.lastWinnerKey(roomId));
+  }
+
   private async finalizeGame(state: InternalGameState): Promise<void> {
     await this.rooms.setStatus(state.roomId, RoomStatus.finished);
+    const winnerId = state.rankings[0];
+    if (winnerId) {
+      await this.redis.set(this.lastWinnerKey(state.roomId), winnerId, 60 * 60 * 24);
+    }
     if (isLiteMode()) {
       return;
     }
@@ -235,6 +257,7 @@ export class GameService {
     return {
       ...parsed,
       turnTimeoutMs: parsed.turnTimeoutMs ?? 30_000,
+      winReason: parsed.winReason ?? null,
       passedSeats: new Set(parsed.passedSeats),
     };
   }
