@@ -59,6 +59,8 @@ export class GameService {
       roomId,
       ordered.map((p) => p.userId),
       room.settings.allowFiveConsecutivePairs,
+      Math.random,
+      room.settings.turnTimeoutMs ?? 30_000,
     );
 
     await this.saveState(state);
@@ -225,9 +227,11 @@ export class GameService {
   private deserialize(raw: string): InternalGameState {
     const parsed = JSON.parse(raw) as Omit<InternalGameState, 'passedSeats'> & {
       passedSeats: number[];
+      turnTimeoutMs?: number;
     };
     return {
       ...parsed,
+      turnTimeoutMs: parsed.turnTimeoutMs ?? 30_000,
       passedSeats: new Set(parsed.passedSeats),
     };
   }

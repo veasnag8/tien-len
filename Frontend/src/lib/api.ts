@@ -147,6 +147,7 @@ class ApiClient {
     maxPlayers?: 2 | 3 | 4;
     allowFiveConsecutivePairs?: boolean;
     isPrivate?: boolean;
+    turnTimeoutMs?: number;
   }) {
     return this.request<{ room: RoomInfo; qrDataUrl: string }>('/rooms', {
       method: 'POST',

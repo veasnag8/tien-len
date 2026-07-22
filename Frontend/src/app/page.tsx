@@ -42,6 +42,7 @@ export default function HomePage() {
         maxPlayers,
         allowFiveConsecutivePairs: true,
         isPrivate: true,
+        turnTimeoutMs: 30_000,
       });
       setRoom(room);
       setQr(qrDataUrl);

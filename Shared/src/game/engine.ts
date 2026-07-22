@@ -61,6 +61,7 @@ export interface InternalGameState {
   passedSeats: Set<number>;
   pile: Card[];
   turnDeadline: number | null;
+  turnTimeoutMs: number;
   rankings: string[];
   allowFiveConsecutivePairs: boolean;
   roundNumber: number;
@@ -76,12 +77,14 @@ export function createGame(
   userIds: string[],
   allowFiveConsecutivePairs: boolean = true,
   random: () => number = Math.random,
+  turnTimeoutMs: number = GAME_CONSTANTS.TURN_TIMEOUT_MS,
 ): InternalGameState {
   const playerCount = userIds.length as 2 | 3 | 4;
   if (playerCount < GAME_CONSTANTS.MIN_PLAYERS || playerCount > GAME_CONSTANTS.MAX_PLAYERS) {
     throw new Error('Invalid player count');
   }
 
+  const timeoutMs = turnTimeoutMs > 0 ? turnTimeoutMs : GAME_CONSTANTS.TURN_TIMEOUT_MS;
   const hands = dealCards(playerCount, random);
   const firstSeat = findThreeOfSpadesHolder(hands);
 
@@ -104,7 +107,8 @@ export function createGame(
     lastPlaySeat: null,
     passedSeats: new Set(),
     pile: [],
-    turnDeadline: Date.now() + GAME_CONSTANTS.TURN_TIMEOUT_MS,
+    turnDeadline: Date.now() + timeoutMs,
+    turnTimeoutMs: timeoutMs,
     rankings: [],
     allowFiveConsecutivePairs,
     roundNumber: 1,
@@ -137,7 +141,7 @@ function resetTrick(state: InternalGameState, starterSeat: number): void {
   state.pile = [];
   state.currentTurnSeat = starterSeat;
   state.lastPlaySeat = null;
-  state.turnDeadline = Date.now() + GAME_CONSTANTS.TURN_TIMEOUT_MS;
+  state.turnDeadline = Date.now() + state.turnTimeoutMs;
 }
 
 function markFinished(state: InternalGameState, seat: number): void {
@@ -221,7 +225,7 @@ export function playCards(
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
-  state.turnDeadline = Date.now() + GAME_CONSTANTS.TURN_TIMEOUT_MS;
+  state.turnDeadline = Date.now() + state.turnTimeoutMs;
   return { ok: true, state };
 }
 
@@ -251,7 +255,7 @@ export function passTurn(state: InternalGameState, userId: string): MoveResult {
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
-  state.turnDeadline = Date.now() + GAME_CONSTANTS.TURN_TIMEOUT_MS;
+  state.turnDeadline = Date.now() + state.turnTimeoutMs;
   return { ok: true, state };
 }
 

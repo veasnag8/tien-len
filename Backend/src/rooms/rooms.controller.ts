@@ -25,6 +25,12 @@ class CreateRoomDto {
   @IsOptional()
   @IsBoolean()
   isPrivate?: boolean;
+
+  /** Turn auto-pass timeout in ms (default 30000 = 30s) */
+  @IsOptional()
+  @IsInt()
+  @IsIn([30_000])
+  turnTimeoutMs?: number;
 }
 
 class JoinRoomDto {
