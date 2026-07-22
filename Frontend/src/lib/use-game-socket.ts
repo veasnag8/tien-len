@@ -13,18 +13,19 @@ import { sounds } from './sounds';
 import { useSettingsStore } from './settings-store';
 
 let sharedSocket: Socket | null = null;
+let sharedToken: string | null = null;
 let listenersAttached = false;
 let pendingRoomCode: string | null = null;
 
 function emitWhenConnected(socket: Socket, event: string, payload?: unknown): void {
   const emit = () => socket.emit(event, payload);
   if (socket.connected) {
-    window.setTimeout(emit, 120);
+    window.setTimeout(emit, 50);
     return;
   }
   const onConnect = () => {
     socket.off('connect', onConnect);
-    window.setTimeout(emit, 120);
+    window.setTimeout(emit, 50);
   };
   socket.on('connect', onConnect);
   if (!socket.active) {
@@ -41,6 +42,10 @@ function syncPendingRoom(socket: Socket): void {
   emitWhenConnected(socket, SocketEvents.PLAYER_RECONNECT, { roomCode: code });
 }
 
+function identify(socket: Socket, token: string): void {
+  emitWhenConnected(socket, SocketEvents.AUTH_IDENTIFY, { token });
+}
+
 function attachSocketListeners(socket: Socket): void {
   if (listenersAttached) {
     return;
@@ -48,6 +53,22 @@ function attachSocketListeners(socket: Socket): void {
   listenersAttached = true;
 
   socket.on('connect', () => {
+    const token = api.loadToken();
+    if (token) {
+      identify(socket, token);
+    }
+    syncPendingRoom(socket);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.warn('[socket] disconnected', reason);
+  });
+
+  socket.on('reconnect', () => {
+    const token = api.loadToken();
+    if (token) {
+      identify(socket, token);
+    }
     syncPendingRoom(socket);
   });
 
@@ -73,6 +94,18 @@ function attachSocketListeners(socket: Socket): void {
     useGameStore.getState().setGame(payload.state);
     useGameStore.getState().clearSelection();
   });
+  socket.on(SocketEvents.GAME_STATE, (payload: {
+    state: import('@tien-len/shared').PrivateGameState | import('@tien-len/shared').PublicGameState;
+  }) => {
+    // Public state only — keep private hand if we already have one
+    const current = useGameStore.getState().game;
+    if (current && 'hand' in current && Array.isArray(current.hand)) {
+      useGameStore.getState().setGame({
+        ...payload.state,
+        hand: current.hand,
+      } as import('@tien-len/shared').PrivateGameState);
+    }
+  });
   socket.on(SocketEvents.CHAT_MESSAGE, (payload: { message: import('@tien-len/shared').ChatMessage }) => {
     useGameStore.getState().addChat(payload.message);
   });
@@ -87,39 +120,69 @@ function attachSocketListeners(socket: Socket): void {
   });
 }
 
-function getOrCreateSocket(): Socket | null {
+function destroySocket(): void {
+  if (!sharedSocket) {
+    return;
+  }
+  sharedSocket.removeAllListeners();
+  sharedSocket.disconnect();
+  sharedSocket = null;
+  sharedToken = null;
+  listenersAttached = false;
+}
+
+/** Call after login / guest session so realtime uses the new JWT. */
+export function ensureGameSocket(): Socket | null {
   const token = api.loadToken();
   if (!token) {
     return null;
   }
 
+  if (sharedSocket && sharedToken !== token) {
+    destroySocket();
+  }
+
   if (!sharedSocket) {
-    sharedSocket = io(`${getWsUrl()}/game`, {
+    const wsUrl = getWsUrl();
+    sharedSocket = io(`${wsUrl}/game`, {
+      path: '/socket.io',
       auth: { token },
-      transports: ['websocket', 'polling'],
+      // polling first is more reliable through Render / cross-origin proxies
+      transports: ['polling', 'websocket'],
+      withCredentials: true,
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 800,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
+      timeout: 20_000,
+      forceNew: false,
     });
+    sharedToken = token;
     attachSocketListeners(sharedSocket);
   } else {
     sharedSocket.auth = { token };
-  }
-
-  if (!sharedSocket.connected && !sharedSocket.active) {
-    sharedSocket.connect();
+    if (sharedSocket.connected) {
+      identify(sharedSocket, token);
+    } else if (!sharedSocket.active) {
+      sharedSocket.connect();
+    }
   }
 
   return sharedSocket;
 }
 
+function getOrCreateSocket(): Socket | null {
+  return ensureGameSocket();
+}
+
 export function useGameSocket() {
   const socketRef = useRef<Socket | null>(null);
+  const userId = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
     socketRef.current = getOrCreateSocket();
-  }, []);
+  }, [userId]);
 
   const createRoom = useCallback(
     (settings: {
@@ -151,34 +214,34 @@ export function useGameSocket() {
   }, []);
 
   const setReady = useCallback((ready: boolean) => {
-    socketRef.current?.emit(SocketEvents.ROOM_READY, { ready });
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_READY, { ready });
   }, []);
 
   const startGame = useCallback(() => {
     sounds.play('deal', useSettingsStore.getState().soundEnabled);
-    socketRef.current?.emit(SocketEvents.ROOM_START);
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_START);
   }, []);
 
   const kick = useCallback((userId: string) => {
-    socketRef.current?.emit(SocketEvents.ROOM_KICK, { userId });
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_KICK, { userId });
   }, []);
 
   const transferHost = useCallback((userId: string) => {
-    socketRef.current?.emit(SocketEvents.ROOM_TRANSFER_HOST, { userId });
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_TRANSFER_HOST, { userId });
   }, []);
 
   const closeRoom = useCallback(() => {
     pendingRoomCode = null;
-    socketRef.current?.emit(SocketEvents.ROOM_CLOSE);
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_CLOSE);
   }, []);
 
   const playAgain = useCallback(() => {
-    socketRef.current?.emit(SocketEvents.ROOM_PLAY_AGAIN);
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_PLAY_AGAIN);
   }, []);
 
   const playCards = useCallback((cards: Card[]) => {
     sounds.play('play', useSettingsStore.getState().soundEnabled);
-    socketRef.current?.emit(SocketEvents.GAME_PLAY, {
+    getOrCreateSocket()?.emit(SocketEvents.GAME_PLAY, {
       cards,
       requestId: uuidv4(),
     });
@@ -186,11 +249,11 @@ export function useGameSocket() {
 
   const pass = useCallback(() => {
     sounds.play('pass', useSettingsStore.getState().soundEnabled);
-    socketRef.current?.emit(SocketEvents.GAME_PASS, { requestId: uuidv4() });
+    getOrCreateSocket()?.emit(SocketEvents.GAME_PASS, { requestId: uuidv4() });
   }, []);
 
   const sendChat = useCallback((content: string, isEmoji = false) => {
-    socketRef.current?.emit(SocketEvents.CHAT_SEND, { content, isEmoji });
+    getOrCreateSocket()?.emit(SocketEvents.CHAT_SEND, { content, isEmoji });
   }, []);
 
   const reconnect = useCallback((roomCode: string) => {

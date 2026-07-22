@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useGameStore } from '@/lib/game-store';
-import { useGameSocket } from '@/lib/use-game-socket';
+import { useGameSocket, ensureGameSocket } from '@/lib/use-game-socket';
 import { useSettingsStore } from '@/lib/settings-store';
 import { t } from '@/lib/i18n';
 import { api } from '@/lib/api';
@@ -47,15 +47,14 @@ export default function RoomPage() {
   const [error, setError] = useState('');
   const [syncTimedOut, setSyncTimedOut] = useState(false);
 
+  // Only reset when navigating to a different room code — never on every room socket update
   useEffect(() => {
     syncedRef.current = null;
     recoveryAttemptedRef.current = false;
     setGame(null);
     setSyncTimedOut(false);
-    if (room && code && room.code !== code) {
-      setRoom(null);
-    }
-  }, [code, room, setGame, setRoom]);
+    setJoined(false);
+  }, [code, setGame]);
 
   useEffect(() => {
     if (user?.nickname) {
@@ -99,10 +98,40 @@ export default function RoomPage() {
       return;
     }
     syncedRef.current = code;
+    ensureGameSocket();
     void api.getRoom(code).then((fresh) => setRoom(fresh)).catch(() => undefined);
     joinRoom(code);
     reconnect(code);
   }, [code, joinRoom, joined, reconnect, setRoom, user]);
+
+  // Live lobby fallback: poll room while waiting (covers flaky WebSocket on free hosts)
+  useEffect(() => {
+    if (!joined || !code || !user) {
+      return;
+    }
+    if (room?.status === 'playing' || room?.status === 'finished') {
+      return;
+    }
+    const tick = () => {
+      void api
+        .getRoom(code)
+        .then((fresh) => {
+          const current = useGameStore.getState().room;
+          if (
+            !current ||
+            current.players.length !== fresh.players.length ||
+            current.status !== fresh.status ||
+            current.players.some((p, i) => p.isReady !== fresh.players[i]?.isReady)
+          ) {
+            setRoom(fresh);
+          }
+        })
+        .catch(() => undefined);
+    };
+    tick();
+    const id = window.setInterval(tick, 2000);
+    return () => window.clearInterval(id);
+  }, [code, joined, room?.status, setRoom, user]);
 
   useEffect(() => {
     if (!joined || !code || room?.status !== 'playing' || game) {

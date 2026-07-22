@@ -2,6 +2,7 @@
 
 import { api } from './api';
 import { useAuthStore } from './auth-store';
+import { ensureGameSocket } from './use-game-socket';
 
 const NAME_KEY = 'playerName';
 
@@ -29,11 +30,13 @@ export async function ensureGuestSession(nickname: string) {
   const token = api.loadToken();
   const current = useAuthStore.getState().user;
   if (token && current?.nickname === name) {
+    ensureGameSocket();
     return current;
   }
 
   const result = await api.guest({ nickname: name });
   api.setToken(result.accessToken);
   useAuthStore.getState().setUser(result.user);
+  ensureGameSocket();
   return result.user;
 }

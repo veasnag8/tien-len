@@ -47,6 +47,8 @@ interface SocketData {
     credentials: true,
   },
   namespace: '/game',
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true,
 })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()

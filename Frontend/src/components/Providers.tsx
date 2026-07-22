@@ -19,7 +19,12 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     hydrateSettings();
-    void hydrateAuth();
+    void hydrateAuth().then(() => {
+      // Boot realtime socket after token hydrate (dynamic import avoids circular load)
+      void import('@/lib/use-game-socket').then(({ ensureGameSocket }) => {
+        ensureGameSocket();
+      });
+    });
   }, [hydrateAuth, hydrateSettings]);
 
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
