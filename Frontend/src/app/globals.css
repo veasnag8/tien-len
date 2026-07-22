@@ -97,15 +97,26 @@ html[lang='en'] .font-display {
   }
 }
 
-/* Phone landscape — compact chrome for card table */
+/* Phone landscape — full-screen play: hide chrome */
 @media (max-width: 900px) and (orientation: landscape) {
   :root {
-    --header-h: 2.75rem;
-    --mobile-nav-h: 3.25rem;
+    --header-h: 0px;
+    --mobile-nav-h: 0px;
+  }
+
+  .site-header,
+  .mobile-nav {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-shell-game {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .page-pad {
-    @apply px-3 py-3;
+    @apply px-3 py-2;
   }
 }
 

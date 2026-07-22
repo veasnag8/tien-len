@@ -99,7 +99,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[rgba(5,13,24,0.92)] backdrop-blur-xl md:hidden"
+      className="mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[rgba(5,13,24,0.92)] backdrop-blur-xl md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >

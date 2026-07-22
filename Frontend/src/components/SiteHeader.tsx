@@ -12,7 +12,7 @@ export function SiteHeader() {
 
   return (
     <header
-      className="fixed inset-x-0 top-0 z-50 border-b border-[var(--border)] bg-[rgba(5,13,24,0.88)] backdrop-blur-xl"
+      className="site-header fixed inset-x-0 top-0 z-50 border-b border-[var(--border)] bg-[rgba(5,13,24,0.88)] backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 md:h-[var(--header-h)] md:px-10">
