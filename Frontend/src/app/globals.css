@@ -107,16 +107,16 @@ html[lang='en'] .font-display {
   .page-pad {
     @apply px-3 py-3;
   }
-
-  .landscape-gate-icon {
-    animation: landscape-tilt 1.4s ease-in-out infinite;
-  }
 }
 
 @media (max-width: 900px) and (orientation: portrait) {
   body {
     overflow: hidden;
   }
+}
+
+.landscape-gate-icon {
+  animation: landscape-tilt 1.4s ease-in-out infinite;
 }
 
 @keyframes landscape-tilt {
