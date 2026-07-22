@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
+import { GameHelpButton } from './GameHelpButton';
 import { useAuthStore } from '@/lib/auth-store';
 import { useGameStore } from '@/lib/game-store';
 import { useSettingsStore } from '@/lib/settings-store';
@@ -139,6 +140,8 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTable
           </div>
         )}
       </div>
+
+      <GameHelpButton />
 
       {/* Scoreboard — top right */}
       <div className="absolute right-2 top-2 z-20 min-w-[7.5rem] rounded-xl border border-white/15 bg-black/45 px-2.5 py-1.5 text-[11px] backdrop-blur-md sm:right-4 sm:top-3 sm:min-w-[9rem] sm:text-xs">

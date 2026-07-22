@@ -81,6 +81,13 @@ const dictionaries = {
     rotateHint: 'This game is designed for landscape (horizontal) mode. Please turn your phone sideways.',
     rotateAction: 'Lock landscape',
     youLabel: 'You',
+    rulesTitle: 'How to play',
+    rule1: 'Beat the cards on the table with a higher combination of the same type.',
+    rule2: 'Singles, pairs, triples, straights, and consecutive pairs are allowed.',
+    rule3: 'Play = play selected cards · Pass = skip your turn.',
+    rule4: 'You have 30 seconds each turn — timeout auto-passes or auto-plays.',
+    rule5: 'First player to empty their hand wins.',
+    rule6: '2–4 players. After the game starts, new players cannot join.',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -162,6 +169,13 @@ const dictionaries = {
     rotateHint: 'ហ្គេមនេះរចនាសម្រាប់របៀបផ្តេក (landscape)។ សូមបង្វិលទូរស័ព្ទទៅផ្នែកខាង។',
     rotateAction: 'ចាក់សោផ្តេក',
     youLabel: 'អ្នក',
+    rulesTitle: 'របៀបលេង',
+    rule1: 'លេងបន្តពីកាតលើតុដោយកាត/សំណុំខ្ពស់ជាង ប្រភេទដូចគ្នា។',
+    rule2: 'អាចលេង៖ មួយសន្លឹក គូ បី ស្ទ្រេត និងគូរៀង។',
+    rule3: 'លេង = ដាក់កាតដែលជ្រើស · រំលង = បោះបង់វេន។',
+    rule4: 'វេនមាន ៣០ វិនាទី — អស់ម៉ោងនឹងរំលង/លេងស្វ័យប្រវត្តិ។',
+    rule5: 'អ្នកណាអស់កាតមុនគេ ឈ្នះ។',
+    rule6: '២–៤ នាក់។ ពេលចាប់ផ្តើមហើយ មិនអាចចូលបន្ថែម។',
   },
 } as const;
 

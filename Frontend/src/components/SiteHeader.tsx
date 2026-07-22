@@ -1,14 +1,29 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSettingsStore } from '@/lib/settings-store';
+import { useGameStore } from '@/lib/game-store';
 import { LITE_MODE } from '@/lib/config';
 import { t } from '@/lib/i18n';
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const locale = useSettingsStore((s) => s.locale);
   const setLocale = useSettingsStore((s) => s.setLocale);
+  const roomStatus = useGameStore((s) => s.room?.status);
   const dict = t(locale);
+
+  const inRoom =
+    pathname.startsWith('/room/') &&
+    pathname !== '/room/create' &&
+    pathname !== '/room/join';
+  const inGame = roomStatus === 'playing' || roomStatus === 'finished';
+
+  // Hide during match so the table is full-screen (phones often >900px wide in landscape)
+  if (inRoom && inGame) {
+    return null;
+  }
 
   return (
     <header
