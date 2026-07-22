@@ -99,7 +99,7 @@ export class RoomsService {
     if (!room || room.status === RoomStatus.closed) {
       throw new NotFoundException('Room not found');
     }
-    if (room.status === RoomStatus.playing) {
+    if (room.status === RoomStatus.playing || room.status === RoomStatus.finished) {
       const existing = room.players.find((p) => p.userId === userId);
       if (!existing) {
         throw new BadRequestException('Game already in progress');

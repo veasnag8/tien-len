@@ -19,7 +19,6 @@ export default function HomePage() {
 
   const [nickname, setNickname] = useState('');
   const [roomCode, setRoomCode] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState<2 | 3 | 4>(4);
   const [showJoin, setShowJoin] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +38,7 @@ export default function HomePage() {
     try {
       await ensureGuestSession(name);
       const { room, qrDataUrl } = await api.createRoom({
-        maxPlayers,
+        maxPlayers: 4,
         allowFiveConsecutivePairs: true,
         isPrivate: true,
         turnTimeoutMs: 30_000,
@@ -106,22 +105,6 @@ export default function HomePage() {
 
         {!showJoin ? (
           <div className="grid gap-3">
-            <div>
-              <label className="mb-2 block text-sm text-[var(--muted)]">{dict.maxPlayersLabel}</label>
-              <div className="grid grid-cols-3 gap-2">
-                {([2, 3, 4] as const).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={maxPlayers === n ? 'btn-primary' : 'btn-secondary'}
-                    disabled={loading}
-                    onClick={() => setMaxPlayers(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
             <button type="button" className="btn-primary w-full" disabled={loading} onClick={() => void onCreate()}>
               {loading ? dict.waiting : dict.createRoom}
             </button>
