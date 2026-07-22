@@ -331,7 +331,7 @@ export default function RoomPage() {
             <p className="text-xs text-[var(--muted)]">{dict.roomCode}</p>
             <h1 className="font-display text-3xl tracking-wider text-gold-300 sm:text-4xl">{room.code}</h1>
             <p className="mt-1 text-sm text-gold-400/90">
-              {dict.playersCount.replace('{current}', String(room.players.length)).replace('{max}', String(room.maxPlayers))}
+              {dict.playersCount.replace('{current}', String(room.players.length)).replace('{max}', String(room.settings.maxPlayers))}
             </p>
           </div>
           {qrDataUrl && (
