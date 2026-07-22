@@ -29,7 +29,7 @@ export default function RoomPage() {
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
-  const { joinRoom, reconnect, requestGameState, setReady, startGame, kick, transferHost, closeRoom, playCards, pass, playAgain, sendChat } =
+  const { joinRoom, reconnect, requestGameState, checkTimeout, setReady, startGame, kick, transferHost, closeRoom, playCards, pass, playAgain, sendChat } =
     useGameSocket();
 
   const setRoom = useGameStore((s) => s.setRoom);
@@ -343,6 +343,7 @@ export default function RoomPage() {
           onPlay={playSelected}
           onPass={() => pass()}
           onPlayAgain={() => playAgain()}
+          onTimeoutCheck={checkTimeout}
         />
         <div className="hidden lg:block">
           <RoomChat messages={chat} onSend={sendChat} />

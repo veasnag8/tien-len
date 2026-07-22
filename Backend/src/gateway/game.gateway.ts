@@ -259,6 +259,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit(SocketEvents.ROOM_UPDATE, { room });
   }
 
+  /** Client nudge when local 30s countdown hits 0 — advances turn if expired. */
+  @SubscribeMessage(SocketEvents.GAME_CHECK_TIMEOUT)
+  async onCheckTimeout(@ConnectedSocket() client: Socket): Promise<void> {
+    const data = client.data as SocketData;
+    if (!data.roomId) {
+      return;
+    }
+    await this.onTurnTimeout(data.roomId);
+  }
+
   @SubscribeMessage(SocketEvents.GAME_PLAY)
   async onPlay(
     @ConnectedSocket() client: Socket,

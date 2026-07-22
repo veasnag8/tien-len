@@ -119,7 +119,10 @@ export class GameService {
     timedOutUserId: string;
   } | null> {
     const state = await this.loadState(roomId);
-    if (!state.turnDeadline || Date.now() < state.turnDeadline) {
+    if (!state.turnTimeoutMs) {
+      state.turnTimeoutMs = 30_000;
+    }
+    if (!state.turnDeadline || Date.now() + 400 < state.turnDeadline) {
       return null;
     }
     const timedOutUserId = state.players[state.currentTurnSeat]?.userId;

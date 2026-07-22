@@ -273,6 +273,14 @@ export function useGameSocket() {
     emitWhenConnected(socket, SocketEvents.GAME_REQUEST_STATE);
   }, []);
 
+  const checkTimeout = useCallback(() => {
+    const socket = getOrCreateSocket();
+    if (!socket) {
+      return;
+    }
+    emitWhenConnected(socket, SocketEvents.GAME_CHECK_TIMEOUT);
+  }, []);
+
   return {
     createRoom,
     joinRoom,
@@ -288,5 +296,6 @@ export function useGameSocket() {
     sendChat,
     reconnect,
     requestGameState,
+    checkTimeout,
   };
 }

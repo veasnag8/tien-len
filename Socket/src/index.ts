@@ -37,6 +37,7 @@ export const SocketEvents = {
   GAME_PLAY: 'game:play',
   GAME_PASS: 'game:pass',
   GAME_TIMEOUT: 'game:timeout',
+  GAME_CHECK_TIMEOUT: 'game:check_timeout',
   GAME_FINISHED: 'game:finished',
   GAME_ERROR: 'game:error',
 

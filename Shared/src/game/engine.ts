@@ -135,13 +135,17 @@ function nextActiveSeat(state: InternalGameState, fromSeat: number): number {
   return seats[0]!;
 }
 
+function turnMs(state: InternalGameState): number {
+  return state.turnTimeoutMs > 0 ? state.turnTimeoutMs : GAME_CONSTANTS.TURN_TIMEOUT_MS;
+}
+
 function resetTrick(state: InternalGameState, starterSeat: number): void {
   state.currentCombination = null;
   state.passedSeats = new Set();
   state.pile = [];
   state.currentTurnSeat = starterSeat;
   state.lastPlaySeat = null;
-  state.turnDeadline = Date.now() + state.turnTimeoutMs;
+  state.turnDeadline = Date.now() + turnMs(state);
 }
 
 function markFinished(state: InternalGameState, seat: number): void {
@@ -225,7 +229,7 @@ export function playCards(
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
-  state.turnDeadline = Date.now() + state.turnTimeoutMs;
+  state.turnDeadline = Date.now() + turnMs(state);
   return { ok: true, state };
 }
 
@@ -255,7 +259,7 @@ export function passTurn(state: InternalGameState, userId: string): MoveResult {
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
-  state.turnDeadline = Date.now() + state.turnTimeoutMs;
+  state.turnDeadline = Date.now() + turnMs(state);
   return { ok: true, state };
 }
 
@@ -263,7 +267,8 @@ export function autoPassOnTimeout(state: InternalGameState): MoveResult {
   if (state.phase !== 'playing' || !state.turnDeadline) {
     return { ok: false, error: 'No active turn' };
   }
-  if (Date.now() < state.turnDeadline) {
+  // Small clock skew tolerance between client countdown and server
+  if (Date.now() + 400 < state.turnDeadline) {
     return { ok: false, error: 'Turn not expired' };
   }
 
@@ -272,6 +277,7 @@ export function autoPassOnTimeout(state: InternalGameState): MoveResult {
     return { ok: false, error: 'Invalid turn player' };
   }
 
+  // Free lead: must play something → auto-play lowest, then turn goes to next
   if (!state.currentCombination) {
     const hand = player.hand;
     if (hand.length === 0) {
@@ -281,6 +287,7 @@ export function autoPassOnTimeout(state: InternalGameState): MoveResult {
     return { ...playCards(state, player.userId, [lowest]), autoPassed: true };
   }
 
+  // Following a play: auto-pass → next player
   return { ...passTurn(state, player.userId), autoPassed: true };
 }
 

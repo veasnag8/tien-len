@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
 import type { PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
@@ -17,6 +18,7 @@ interface GameTableProps {
   onPlay: () => void;
   onPass: () => void;
   onPlayAgain: () => void;
+  onTimeoutCheck?: () => void;
 }
 
 type SeatSlot = 'top' | 'left' | 'right';
@@ -91,7 +93,7 @@ function OpponentFan({
   );
 }
 
-export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTableProps) {
+export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCheck }: GameTableProps) {
   const user = useAuthStore((s) => s.user);
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const toggleCard = useGameStore((s) => s.toggleCard);
@@ -102,6 +104,16 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain }: GameTable
   const mySeat = me?.seatIndex ?? 0;
   const isMyTurn = me?.seatIndex === game.currentTurnSeat && game.phase === 'playing';
   const secondsLeft = useCountdown(game.turnDeadline);
+
+  // When local timer hits 0, nudge server to auto-pass / advance turn
+  useEffect(() => {
+    if (secondsLeft !== 0 || game.phase !== 'playing' || !onTimeoutCheck) {
+      return;
+    }
+    onTimeoutCheck();
+    const id = window.setTimeout(() => onTimeoutCheck(), 400);
+    return () => window.clearTimeout(id);
+  }, [secondsLeft, game.phase, game.turnDeadline, onTimeoutCheck]);
 
   const finished = game.phase === 'finished';
   const iWon = finished && game.rankings[0] === user?.id;
