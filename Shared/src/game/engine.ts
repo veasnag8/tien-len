@@ -1,4 +1,4 @@
-import { Card, Rank, sortCards } from '../cards/types';
+import { Card, Rank, formatCard, sortCards } from '../cards/types';
 import { dealCards, findThreeOfSpadesHolder } from '../cards/deck';
 import {
   Combination,
@@ -281,7 +281,7 @@ export function playCards(
       }
       return {
         ok: false,
-        error: 'Combination is not higher than the cards on the table.',
+        error: `Too small — yours ${formatCard(combination.highestCard)}, table has ${formatCard(state.currentCombination.highestCard)}.`,
       };
     }
   }

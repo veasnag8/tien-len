@@ -342,7 +342,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           {game.phase === 'playing' ? (
             <button
               type="button"
-              className="btn-table-play"
+              className={`btn-table-play${isMyTurn ? ' is-active' : ''}`}
               disabled={!isMyTurn || selectedCardIds.length === 0 || Boolean(flyingCards)}
               onClick={handlePlay}
             >
@@ -379,7 +379,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           {game.phase === 'playing' ? (
             <button
               type="button"
-              className="btn-table-pass"
+              className={`btn-table-pass${isMyTurn && game.currentCombination ? ' is-active' : ''}`}
               disabled={!isMyTurn || !game.currentCombination}
               onClick={onPass}
             >

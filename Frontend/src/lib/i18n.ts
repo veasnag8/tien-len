@@ -100,9 +100,13 @@ const dictionaries = {
     playErrorStraightLength: 'Straight must be the same length as on the table ({n} cards).',
     playErrorWrongType: 'Must match the combination type on the table (or play a valid chop).',
     playErrorNotHigher: 'Your cards are not higher than the ones on the table.',
+    playErrorSmaller: 'Too small — yours {yours}, table has {theirs} (♥>♦>♣>♠).',
+    playErrorEqual: 'Same strength — yours {yours} = table {theirs}. Need higher.',
     playErrorNotTurn: 'Not your turn.',
     playErrorNotInHand: 'Those cards are not in your hand.',
     playErrorFivePairsOff: 'Five consecutive pairs are disabled in this room.',
+    ruleSuit:
+      'Suits: ♥♦ red, ♣♠ black. Same rank: A♥ > A♦ > A♣ > A♠.',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -203,9 +207,12 @@ const dictionaries = {
     playErrorStraightLength: 'រាងត្រូវចំនួនសន្លឹកដូចលើតុ ({n} សន្លឹក)។',
     playErrorWrongType: 'ត្រូវលេងប្រភេទដូចកាតលើតុ (ឬវាយផ្ទុះ/chop ត្រឹមត្រូវ)។',
     playErrorNotHigher: 'កាតរបស់អ្នកមិនខ្ពស់ជាងកាតលើតុទេ។',
+    playErrorSmaller: 'តូចជាង — របស់អ្នក {yours} តុមាន {theirs} (♥>♦>♣>♠)។',
+    playErrorEqual: 'ស្មើគ្នា — របស់អ្នក {yours} = តុ {theirs}។ ត្រូវធំជាង។',
     playErrorNotTurn: 'មិនមែនវេនរបស់អ្នក។',
     playErrorNotInHand: 'កាតទាំងនោះមិននៅក្នុងដៃទេ។',
     playErrorFivePairsOff: 'បន្ទប់នេះបិទគូរៀង ៥។',
+    ruleSuit: 'ពណ៌៖ ♥♦ ក្រហម · ♣♠ ខ្មៅ។ លេខដូចគ្នា៖ A♥ > A♦ > A♣ > A♠។',
   },
 } as const;
 

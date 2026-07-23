@@ -100,18 +100,26 @@ html[lang='en'] .font-display {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
 
-  .btn-table-play {
+  .btn-table-play,
+  .btn-table-pass {
     @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:h-16 sm:w-16 sm:text-sm;
     background: linear-gradient(160deg, #8fa3b8 0%, #5a6d82 45%, #3d4d5c 100%);
     border: 2px solid rgba(255, 255, 255, 0.35);
     box-shadow: 0 4px 0 #2a3540, 0 6px 14px rgba(0, 0, 0, 0.35);
   }
 
-  .btn-table-pass {
-    @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:h-16 sm:w-16 sm:text-sm;
-    background: linear-gradient(160deg, #f07171 0%, #d63b3b 45%, #a intermediate 100%);
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 4px 0 #6b1a1a, 0 6px 14px rgba(0, 0, 0, 0.35);
+  /* Green only on your turn */
+  .btn-table-play.is-active {
+    background: linear-gradient(160deg, #4ade80 0%, #16a34a 45%, #15803d 100%);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 0 #14532d, 0 6px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Red only when you can pass */
+  .btn-table-pass.is-active {
+    background: linear-gradient(160deg, #f87171 0%, #ef4444 45%, #b91c1c 100%);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 0 #7f1d1d, 0 6px 14px rgba(0, 0, 0, 0.35);
   }
 }
 

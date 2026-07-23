@@ -2,6 +2,8 @@ import {
   canBeat,
   identifyCombination,
   CombinationType,
+  formatCard,
+  compareCards,
   type Card,
   type Combination,
 } from '@tien-len/shared';
@@ -53,7 +55,18 @@ export function explainPlayFailure(
     return dict.playErrorWrongType;
   }
 
-  return dict.playErrorNotHigher;
+  // Same type (and same straight length) but not higher — show exact comparison
+  const yours = formatCard(combination.highestCard);
+  const theirs = formatCard(current.highestCard);
+  const cmp = compareCards(combination.highestCard, current.highestCard);
+  if (cmp === 0) {
+    return dict.playErrorEqual
+      .replace('{yours}', yours)
+      .replace('{theirs}', theirs);
+  }
+  return dict.playErrorSmaller
+    .replace('{yours}', yours)
+    .replace('{theirs}', theirs);
 }
 
 /** Map server English errors to local dictionary when possible. */
@@ -69,7 +82,12 @@ export function localizeServerPlayError(message: string, dict: Dictionary): stri
   if (lower.includes('same combination type') || lower.includes('valid chop')) {
     return dict.playErrorWrongType;
   }
-  if (lower.includes('not higher') || lower.includes('cannot beat')) {
+  if (lower.includes('too small') || lower.includes('not higher') || lower.includes('cannot beat')) {
+    const yours = message.match(/yours\s+([^\s,]+)/i)?.[1];
+    const theirs = message.match(/table has\s+([^\s.]+)/i)?.[1];
+    if (yours && theirs) {
+      return dict.playErrorSmaller.replace('{yours}', yours).replace('{theirs}', theirs);
+    }
     return dict.playErrorNotHigher;
   }
   if (lower.includes('not your turn')) {
