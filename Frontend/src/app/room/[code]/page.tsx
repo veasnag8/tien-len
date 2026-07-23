@@ -391,7 +391,6 @@ export default function RoomPage() {
           game={game}
           onPlay={playSelected}
           onPass={() => pass()}
-          onPlayAgain={() => playAgain()}
           onTimeoutCheck={checkTimeout}
         />
         <div className="hidden lg:block">

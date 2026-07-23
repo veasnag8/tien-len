@@ -19,7 +19,6 @@ interface GameTableProps {
   game: PrivateGameState;
   onPlay: () => void;
   onPass: () => void;
-  onPlayAgain: () => void;
   onTimeoutCheck?: () => void;
 }
 
@@ -95,7 +94,7 @@ function OpponentFan({
   );
 }
 
-export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCheck }: GameTableProps) {
+export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTableProps) {
   const user = useAuthStore((s) => s.user);
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const playError = useGameStore((s) => s.playError);
@@ -182,7 +181,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   // Fallback if GAME_FINISHED event was missed
   useEffect(() => {
     if (finished && nextGameAt == null) {
-      useGameStore.getState().setNextGameAt(Date.now() + 5_000);
+      useGameStore.getState().setNextGameAt(Date.now() + 3_000);
     }
   }, [finished, nextGameAt]);
 
@@ -408,9 +407,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
               {dict.pass}
             </button>
           ) : (
-            <button type="button" className="btn-table-play !px-4" onClick={onPlayAgain}>
-              {dict.startNow}
-            </button>
+            <span className="w-20 sm:w-24" />
           )}
         </div>
       </div>
