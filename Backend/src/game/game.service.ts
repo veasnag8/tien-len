@@ -3,6 +3,7 @@ import { RoomStatus } from '@prisma/client';
 import {
   autoPassOnTimeout,
   createGame,
+  forfeitPlayer,
   passTurn,
   playCards,
   toPrivateState,
@@ -170,6 +171,27 @@ export class GameService {
   async clearSession(roomId: string): Promise<void> {
     await this.redis.del(this.gameKey(roomId));
     await this.redis.del(this.lastWinnerKey(roomId));
+  }
+
+  /** Mid-game leave with 2+ players still in room — forfeit leaver, others continue. */
+  async forfeitOnLeave(roomId: string, userId: string): Promise<{
+    publicState: PublicGameState;
+    privateStates: Map<string, PrivateGameState>;
+  } | null> {
+    const raw = await this.redis.get(this.gameKey(roomId));
+    if (!raw) {
+      return null;
+    }
+    const state = this.deserialize(raw);
+    const changed = forfeitPlayer(state, userId);
+    if (!changed) {
+      return null;
+    }
+    await this.saveState(state);
+    if (state.phase === 'finished') {
+      await this.finalizeGame(state);
+    }
+    return this.snapshot(state);
   }
 
   private async finalizeGame(state: InternalGameState): Promise<void> {

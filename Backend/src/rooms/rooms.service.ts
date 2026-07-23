@@ -155,12 +155,21 @@ export class RoomsService {
     await this.prisma.roomPlayer.deleteMany({ where: { roomId, userId } });
 
     const remaining = room.players.filter((p) => p.userId !== userId);
-    if (remaining.length === 0) {
+
+    // Empty room, or mid-game with fewer than 2 players → close
+    const tooFewToPlay =
+      remaining.length < GAME_CONSTANTS.MIN_PLAYERS &&
+      (room.status === RoomStatus.playing || room.status === RoomStatus.finished);
+
+    if (remaining.length === 0 || tooFewToPlay) {
       await this.prisma.room.update({
         where: { id: roomId },
         data: { status: RoomStatus.closed },
       });
+      await this.prisma.roomPlayer.deleteMany({ where: { roomId } });
       await this.redis.del(`room:${roomId}`);
+      await this.redis.del(`game:${roomId}`);
+      await this.redis.del(`game:${roomId}:lastWinner`);
       return null;
     }
 

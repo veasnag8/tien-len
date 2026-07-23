@@ -222,6 +222,56 @@ function markFinished(state: InternalGameState, seat: number): void {
   }
 }
 
+/** Player left mid-game — last place among those still in; continue if ≥2 remain. */
+export function forfeitPlayer(state: InternalGameState, userId: string): boolean {
+  if (state.phase !== 'playing') {
+    return false;
+  }
+  const player = state.players.find((p) => p.userId === userId);
+  if (!player || player.hasFinished) {
+    return false;
+  }
+
+  const seat = player.seatIndex;
+  const othersStillIn = state.players.filter((p) => !p.hasFinished && p.userId !== userId).length;
+
+  player.hand = [];
+  player.hasFinished = true;
+  player.isConnected = false;
+  player.placement = othersStillIn + 1;
+  state.finishedCount += 1;
+  state.passedSeats.delete(seat);
+
+  const remaining = activeSeats(state);
+
+  if (remaining.length <= 1) {
+    if (remaining.length === 1) {
+      const winner = state.players[remaining[0]!]!;
+      winner.hasFinished = true;
+      winner.placement = 1;
+    }
+    // Winner first, then others by placement (2, 3, …)
+    const ordered = [...state.players].sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99));
+    state.rankings = ordered.map((p) => p.userId);
+    state.finishedCount = state.players.length;
+    state.phase = 'finished';
+    state.turnDeadline = null;
+    state.winReason = state.winReason ?? 'empty_hand';
+    return true;
+  }
+
+  if (state.currentTurnSeat === seat) {
+    if (state.currentCombination && state.lastPlaySeat === seat) {
+      resetTrick(state, nextActiveSeat(state, seat));
+    } else {
+      state.currentTurnSeat = nextActiveSeat(state, seat);
+      state.turnDeadline = Date.now() + turnMs(state);
+    }
+  }
+
+  return true;
+}
+
 export function playCards(
   state: InternalGameState,
   userId: string,

@@ -138,22 +138,47 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!player || player.isConnected) {
         return;
       }
-      const room = await this.rooms.leaveRoom(userId, roomId);
-      if (!room) {
-        // Last player left — close room + game
-        this.clearTurnTimer(roomId);
-        await this.game.clearSession(roomId).catch(() => undefined);
-        this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, {
-          roomId,
-          reason: 'closed',
-        });
-        this.server.in(roomId).socketsLeave(roomId);
-        return;
-      }
-      this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+      await this.finishPlayerLeave(roomId, userId);
     } catch {
       // ignore
     }
+  }
+
+  /** Shared leave path: close if <2 mid-game; else forfeit and continue. */
+  private async finishPlayerLeave(roomId: string, userId: string): Promise<void> {
+    const before = await this.rooms.getRoomInfo(roomId).catch(() => null);
+    const wasPlaying = before?.status === 'playing';
+
+    const room = await this.rooms.leaveRoom(userId, roomId);
+
+    if (!room) {
+      // 0 left, or 2-player game dropped to 1 → room closed
+      this.clearTurnTimer(roomId);
+      await this.game.clearSession(roomId).catch(() => undefined);
+      this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, {
+        roomId,
+        reason: 'closed',
+      });
+      this.server.in(roomId).socketsLeave(roomId);
+      return;
+    }
+
+    // 3+ → 2 (or more) still in: forfeit leaver inside active game
+    if (wasPlaying) {
+      const snap = await this.game.forfeitOnLeave(roomId, userId);
+      if (snap) {
+        this.broadcastGame(roomId, snap);
+        this.scheduleTurnTimer(roomId, snap.publicState.turnDeadline);
+        if (snap.publicState.phase === 'finished') {
+          this.server.to(roomId).emit(SocketEvents.GAME_FINISHED, {
+            rankings: snap.publicState.rankings,
+            state: snap.publicState,
+          });
+        }
+      }
+    }
+
+    this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
   }
 
   @SubscribeMessage(SocketEvents.AUTH_IDENTIFY)
@@ -211,18 +236,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomId = data.roomId;
     const userId = data.userId;
     this.clearDisconnectLeave(roomId, userId);
-    const room = await this.rooms.leaveRoom(userId, roomId);
     client.leave(roomId);
     data.roomId = undefined;
     client.emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'left' });
-    if (!room) {
-      this.clearTurnTimer(roomId);
-      await this.game.clearSession(roomId).catch(() => undefined);
-      this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'closed' });
-      this.server.in(roomId).socketsLeave(roomId);
-      return;
-    }
-    this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+    await this.finishPlayerLeave(roomId, userId);
   }
 
   @SubscribeMessage(SocketEvents.ROOM_READY)
