@@ -15,6 +15,21 @@ export const GAME_CONSTANTS = {
   RATE_LIMIT_MAX_REQUESTS: 20,
 } as const;
 
+/**
+ * Round points by finish place (index 0 = 1st). Totals may go below 0.
+ * 2p: +3 / -3 · 3p: +3 / -1 / -2 · 4p: +3 / +2 / -2 / -3
+ */
+export const POINTS_BY_PLACEMENT: Record<2 | 3 | 4, readonly number[]> = {
+  2: [3, -3],
+  3: [3, -1, -2],
+  4: [3, 2, -2, -3],
+};
+
+export function pointsForPlacement(playerCount: number, placeIndex: number): number {
+  const table = POINTS_BY_PLACEMENT[playerCount as 2 | 3 | 4];
+  return table?.[placeIndex] ?? 0;
+}
+
 export const SUPPORTED_LOCALES = ['km', 'en'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 

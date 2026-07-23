@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
+import { pointsForPlacement } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
 import { GameHelpButton } from './GameHelpButton';
@@ -413,12 +414,23 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           <ol className="space-y-1 text-sm text-white">
             {game.rankings.map((uid, i) => {
               const info = room.players.find((p) => p.userId === uid);
+              const pts = pointsForPlacement(game.playerCount, i);
+              const ptsLabel = pts > 0 ? `+${pts}` : String(pts);
               return (
-                <li key={uid} className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/25 text-xs text-amber-200">
-                    {i + 1}
+                <li key={uid} className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/25 text-xs text-amber-200">
+                      {i + 1}
+                    </span>
+                    <span className="truncate">{info?.nickname ?? uid}</span>
                   </span>
-                  {info?.nickname ?? uid}
+                  <span
+                    className={`shrink-0 tabular-nums text-xs font-semibold ${
+                      pts > 0 ? 'text-emerald-300' : pts < 0 ? 'text-rose-300' : 'text-white/60'
+                    }`}
+                  >
+                    {ptsLabel}
+                  </span>
                 </li>
               );
             })}

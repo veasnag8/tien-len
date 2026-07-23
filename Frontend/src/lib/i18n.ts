@@ -42,6 +42,7 @@ const dictionaries = {
     playAgain: 'Play Again',
     wins: 'Wins',
     gamesPlayed: 'Games Played',
+    points: 'Points',
     winRate: 'Win Rate',
     rank: 'Rank',
     history: 'History',
@@ -108,6 +109,8 @@ const dictionaries = {
     playErrorFivePairsOff: 'Five consecutive pairs are disabled in this room.',
     ruleSuit:
       'Suits: ♥♦ red, ♣♠ black. Same rank: A♥ > A♦ > A♣ > A♠.',
+    rulePoints:
+      'Points (start at 0, can go negative): 2p +3/−3 · 3p +3/−1/−2 · 4p +3/+2/−2/−3.',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -150,6 +153,7 @@ const dictionaries = {
     playAgain: 'លេងម្តងទៀត',
     wins: 'ឈ្នះ',
     gamesPlayed: 'វគ្គលេង',
+    points: 'ពិន្ទុ',
     winRate: 'អត្រាឈ្នះ',
     rank: 'ចំណាត់ថ្នាក់',
     history: 'ប្រវត្តិ',
@@ -215,6 +219,8 @@ const dictionaries = {
     playErrorNotInHand: 'កាតទាំងនោះមិននៅក្នុងដៃទេ។',
     playErrorFivePairsOff: 'បន្ទប់នេះបិទគូរៀង ៥។',
     ruleSuit: 'ពណ៌៖ ♥♦ ក្រហម · ♣♠ ខ្មៅ។ លេខដូចគ្នា៖ A♥ > A♦ > A♣ > A♠។',
+    rulePoints:
+      'ពិន្ទុ (ចាប់ផ្តើម ០ អាចដល់ក្រោម ០)៖ ២នាក់ +៣/−៣ · ៣នាក់ +៣/−១/−២ · ៤នាក់ +៣/+២/−២/−៣។',
   },
 } as const;
 

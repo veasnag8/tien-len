@@ -6,6 +6,7 @@ import {
   forfeitPlayer,
   passTurn,
   playCards,
+  pointsForPlacement,
   toPrivateState,
   toPublicState,
   type Card,
@@ -17,12 +18,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { RoomsService } from '../rooms/rooms.service';
 import { isLiteMode } from '../config/lite';
-
-const POINTS_BY_PLACEMENT: Record<number, number[]> = {
-  2: [10, 0],
-  3: [15, 8, 0],
-  4: [20, 12, 6, 0],
-};
 
 @Injectable()
 export class GameService {
@@ -200,15 +195,13 @@ export class GameService {
     if (winnerId) {
       await this.redis.set(this.lastWinnerKey(state.roomId), winnerId, 60 * 60 * 24);
     }
-    if (isLiteMode()) {
-      return;
-    }
-    const pointsTable = POINTS_BY_PLACEMENT[state.playerCount] ?? [0, 0, 0, 0];
 
-    const game = await this.prisma.game.findFirst({
-      where: { roomId: state.roomId, endedAt: null },
-      orderBy: { startedAt: 'desc' },
-    });
+    const game = isLiteMode()
+      ? null
+      : await this.prisma.game.findFirst({
+          where: { roomId: state.roomId, endedAt: null },
+          orderBy: { startedAt: 'desc' },
+        });
 
     if (game) {
       await this.prisma.game.update({
@@ -218,11 +211,14 @@ export class GameService {
           stateJson: toPublicState(state) as object,
         },
       });
+    }
 
-      for (let i = 0; i < state.rankings.length; i += 1) {
-        const userId = state.rankings[i]!;
-        const placement = i + 1;
-        const points = pointsTable[i] ?? 0;
+    // Award points for every mode (totals may go negative)
+    for (let i = 0; i < state.rankings.length; i += 1) {
+      const userId = state.rankings[i]!;
+      const placement = i + 1;
+      const points = pointsForPlacement(state.playerCount, i);
+      if (game) {
         await this.prisma.gameResult.create({
           data: {
             gameId: game.id,
@@ -232,6 +228,8 @@ export class GameService {
             points,
           },
         });
+      }
+      try {
         await this.prisma.user.update({
           where: { id: userId },
           data: {
@@ -240,6 +238,8 @@ export class GameService {
             points: { increment: points },
           },
         });
+      } catch {
+        // guest / missing user — skip
       }
     }
   }

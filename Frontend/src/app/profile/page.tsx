@@ -69,7 +69,7 @@ export default function ProfilePage() {
           <Stat label={dict.gamesPlayed} value={String(profile.gamesPlayed)} />
           <Stat label={dict.wins} value={String(profile.wins)} />
           <Stat label={dict.winRate} value={`${profile.winRate}%`} />
-          <Stat label={dict.rank} value={profile.currentRank ? `#${profile.currentRank}` : '—'} />
+          <Stat label={dict.points} value={String(profile.points)} />
         </div>
 
         <h2 className="font-display mt-10 mb-4 text-2xl text-gold-300">{dict.history}</h2>
@@ -80,7 +80,10 @@ export default function ProfilePage() {
               className="flex justify-between rounded-xl border border-[var(--border)] bg-black/20 px-4 py-3 text-sm"
             >
               <span>
-                #{h.placement} / {h.playerCount} · +{h.points} pts
+                #{h.placement} / {h.playerCount} ·{' '}
+                <span className={h.points < 0 ? 'text-rose-300' : 'text-emerald-300'}>
+                  {h.points > 0 ? `+${h.points}` : h.points} pts
+                </span>
               </span>
               <span className="text-[var(--muted)]">
                 {new Date(h.playedAt).toLocaleString()}

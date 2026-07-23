@@ -39,6 +39,7 @@ export class AuthService {
       gamesPlayed: user.gamesPlayed,
       wins: user.wins,
       winRate,
+      points: user.points,
       currentRank: null,
       createdAt: user.createdAt.toISOString(),
     };

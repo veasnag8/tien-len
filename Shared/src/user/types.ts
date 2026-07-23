@@ -10,6 +10,7 @@ export interface UserProfile {
   gamesPlayed: number;
   wins: number;
   winRate: number;
+  points: number;
   currentRank: number | null;
   createdAt: string;
 }

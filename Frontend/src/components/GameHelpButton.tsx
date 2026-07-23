@@ -70,6 +70,7 @@ export function GameHelpButton() {
               <li>• {dict.rule7}</li>
               <li>• {dict.rule8}</li>
               <li>• {dict.ruleSuit}</li>
+              <li>• {dict.rulePoints}</li>
             </ul>
 
             <button type="button" className="btn-primary mt-5 w-full" onClick={() => setOpen(false)}>
