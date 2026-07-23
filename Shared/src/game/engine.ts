@@ -5,9 +5,10 @@ import {
   CombinationType,
   canBeat,
   cardsBelongToHand,
-  getCarréChopTransfers,
+  resolveCarréChop,
   identifyCombination,
   removeCardsFromHand,
+  type CarréChopChain,
   type ChopTransfer,
 } from './combinations';
 import { GAME_CONSTANTS } from '../constants';
@@ -73,6 +74,8 @@ export interface InternalGameState {
   roundNumber: number;
   finishedCount: number;
   winReason: WinReason | null;
+  /** Active ការ៉េ-on-2 point chain for the current trick. */
+  carréChopChain: CarréChopChain | null;
 }
 
 /** ផ្ទុះ — all four rank-2 cards in one hand → instant win. */
@@ -133,6 +136,7 @@ export function createGame(
     roundNumber: Math.max(1, Math.floor(roundNumber)),
     finishedCount: 0,
     winReason: null,
+    carréChopChain: null,
   };
 
   applyFourTwosInstantWin(state);
@@ -195,6 +199,7 @@ function resetTrick(state: InternalGameState, starterSeat: number): void {
   state.currentTurnSeat = starterSeat;
   state.lastPlaySeat = null;
   state.turnDeadline = Date.now() + turnMs(state);
+  state.carréChopChain = null;
 }
 
 function markFinished(state: InternalGameState, seat: number): void {
@@ -341,12 +346,14 @@ export function playCards(
 
   const victimId =
     state.lastPlaySeat != null ? (state.players[state.lastPlaySeat]?.userId ?? null) : null;
-  const chopTransfers = getCarréChopTransfers(
+  const { transfers: chopTransfers, chain: nextChain } = resolveCarréChop(
     combination,
     state.currentCombination,
     userId,
     victimId,
+    state.carréChopChain,
   );
+  state.carréChopChain = nextChain;
 
   player.hand = removeCardsFromHand(player.hand, cards);
   state.pile = [...state.pile, ...cards];

@@ -97,7 +97,7 @@ const dictionaries = {
     rule7: '3♠ opens only the first game. After that, the previous winner leads.',
     rule8: 'Four 2s (all four cards of rank 2) = ផ្ទុះ — instant win when dealt.',
     ruleCarre:
-      'ការ៉េ (four of a kind, e.g. 5555) can beat a 2. Chop red 2 (♥♦): you +3, them −3. Black 2 (♣♠): +2/−2. Instant.',
+      'ការ៉េ (e.g. 5555) beats a 2: red +3/−3, black +2/−2. If a bigger ការ៉េ (6666) overchops, the 2-player is cleared; the previous ការ៉េ pays double (−6 / +6). Each further overchop ×2 again.',
     chopToast: 'ការ៉េ! {attacker} +{pts} · {victim} −{pts}',
     explodeWin: 'ផ្ទុះ! Four 2s — instant win',
     playErrorEmpty: 'Select cards first.',
@@ -213,7 +213,7 @@ const dictionaries = {
     rule7: '៣♠ ដឹកមុនតែវគ្គដំបូង។ វគ្គបន្ទាប់ អ្នកឈ្នះមុនដឹក។',
     rule8: 'មានសន្លឹក២ ទាំង៤ សន្លឹក = ផ្ទុះ — ឈ្នះភ្លាម។',
     ruleCarre:
-      'ការ៉េ (សន្លឹកដូចគ្នា៤ ឧ. ៥៥៥៥) អាចវាយ២។ វាយ២ក្រហម (♥♦)៖ អ្នក+៣ គេ−៣។ ខ្មៅ (♣♠)៖ +២/−២។ ពិន្ទុភ្លាម។',
+      'ការ៉េ (ឧ. ៥៥៥៥) វាយ២៖ ក្រហម +៣/−៣ · ខ្មៅ +២/−២។ បើមានការ៉េធំជាង (៦៦៦៦) វាយបន្ត — អ្នកលេង២មិនកាត់ទៀត · អ្នក៥៥៥៥ −៦ អ្នក៦៦៦៦ +៦។ វាយបន្តទៀតគុណ×២។',
     chopToast: 'ការ៉េ! {attacker} +{pts} · {victim} −{pts}',
     explodeWin: 'ផ្ទុះ! សន្លឹក២ ទាំង៤ — ឈ្នះភ្លាម',
     playErrorEmpty: 'សូមជ្រើសកាតសិន។',

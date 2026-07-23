@@ -198,13 +198,18 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
     if (!chopTransfers?.length) {
       return null;
     }
-    const pts = chopTransfers.reduce((sum, t) => sum + t.points, 0);
-    const attackerId = chopTransfers[0]!.attackerId;
-    const victimId = chopTransfers[0]!.victimId;
+    // Prefer overchop / first chop line (ignore refund) so toast matches final stake
+    const focus =
+      chopTransfers.find((t) => t.kind === 'overchop') ??
+      chopTransfers.find((t) => t.kind === 'chop') ??
+      chopTransfers[0]!;
+    const pts = focus.points;
     const attacker =
-      room.players.find((p) => p.userId === attackerId)?.nickname ?? attackerId.slice(0, 6);
+      room.players.find((p) => p.userId === focus.attackerId)?.nickname ??
+      focus.attackerId.slice(0, 6);
     const victim =
-      room.players.find((p) => p.userId === victimId)?.nickname ?? victimId.slice(0, 6);
+      room.players.find((p) => p.userId === focus.victimId)?.nickname ??
+      focus.victimId.slice(0, 6);
     return dict.chopToast
       .replace('{attacker}', attacker)
       .replace('{victim}', victim)

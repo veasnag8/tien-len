@@ -347,6 +347,7 @@ export class GameService {
       ...parsed,
       turnTimeoutMs: parsed.turnTimeoutMs ?? 30_000,
       winReason: parsed.winReason ?? null,
+      carréChopChain: parsed.carréChopChain ?? null,
       passedSeats: new Set(parsed.passedSeats),
     };
   }
