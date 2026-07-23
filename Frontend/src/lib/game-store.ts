@@ -29,7 +29,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playError: null,
   setRoom: (room) => set({ room }),
   setQrDataUrl: (qrDataUrl) => set({ qrDataUrl }),
-  setGame: (game) => set({ game, playError: null }),
+  setGame: (game) => set({ game }),
   addChat: (message) => set({ chat: [...get().chat.slice(-99), message] }),
   toggleCard: (cardId) => {
     const selected = get().selectedCardIds;

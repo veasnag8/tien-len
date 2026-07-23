@@ -429,13 +429,62 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ): void {
     this.server.to(roomId).emit(SocketEvents.GAME_STATE, { state: snap.publicState });
-    for (const [userId, state] of snap.privateStates) {
-      for (const [, socket] of this.server.sockets.sockets) {
+    void this.emitPrivateStates(roomId, snap.privateStates);
+  }
+
+  /** Deliver each player's private hand on the /game namespace. */
+  private async emitPrivateStates(
+    roomId: string,
+    privateStates: Map<string, import('@tien-len/shared').PrivateGameState>,
+  ): Promise<void> {
+    const nsp = this.gameNamespace();
+
+    let sockets: Array<{ data: SocketData; emit: (event: string, payload: unknown) => void }> = [];
+    try {
+      sockets = (await nsp.in(roomId).fetchSockets()) as typeof sockets;
+    } catch {
+      sockets = [];
+    }
+
+    if (sockets.length === 0) {
+      const local = (nsp as { sockets?: Map<string, Socket> }).sockets;
+      if (local && typeof local.values === 'function') {
+        sockets = [...local.values()];
+      }
+    }
+
+    for (const [userId, state] of privateStates) {
+      for (const socket of sockets) {
         if ((socket.data as SocketData).userId === userId) {
           socket.emit(SocketEvents.GAME_PRIVATE_STATE, { state });
         }
       }
     }
+  }
+
+  private gameNamespace(): {
+    in: (roomId: string) => { fetchSockets: () => Promise<unknown[]> };
+    sockets?: Map<string, Socket>;
+    of?: (name: string) => {
+      in: (roomId: string) => { fetchSockets: () => Promise<unknown[]> };
+      sockets?: Map<string, Socket>;
+    };
+    name?: string;
+  } {
+    const server = this.server as unknown as {
+      name?: string;
+      of: (name: string) => {
+        in: (roomId: string) => { fetchSockets: () => Promise<unknown[]> };
+        sockets?: Map<string, Socket>;
+      };
+      in: (roomId: string) => { fetchSockets: () => Promise<unknown[]> };
+      sockets?: Map<string, Socket>;
+    };
+    // Nest may inject either the root Server or the /game Namespace
+    if (server.name === '/game') {
+      return server;
+    }
+    return server.of('/game');
   }
 
   private scheduleTurnTimer(roomId: string, deadline: number | null): void {
