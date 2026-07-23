@@ -11,6 +11,8 @@ import { useGameStore } from './game-store';
 import { useAuthStore } from './auth-store';
 import { sounds } from './sounds';
 import { useSettingsStore } from './settings-store';
+import { t } from './i18n';
+import { localizeServerPlayError } from './play-errors';
 
 let sharedSocket: Socket | null = null;
 let sharedToken: string | null = null;
@@ -117,6 +119,12 @@ function attachSocketListeners(socket: Socket): void {
   });
   socket.on(SocketEvents.ROOM_ERROR, (payload: { code: string; message: string }) => {
     console.warn('[socket] room error', payload.code, payload.message);
+    useGameStore.getState().setPlayError(payload.message);
+  });
+  socket.on(SocketEvents.GAME_ERROR, (payload: { code: string; message: string }) => {
+    console.warn('[socket] game error', payload.code, payload.message);
+    const locale = useSettingsStore.getState().locale;
+    useGameStore.getState().setPlayError(localizeServerPlayError(payload.message, t(locale)));
   });
 }
 

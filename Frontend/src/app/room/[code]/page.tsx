@@ -13,6 +13,7 @@ import { MobileChatSheet } from '@/components/MobileChatSheet';
 import { GameTable } from '@/components/GameTable';
 import { LITE_MODE } from '@/lib/config';
 import { ensureGuestSession, getSavedPlayerName } from '@/lib/guest-session';
+import { explainPlayFailure } from '@/lib/play-errors';
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -46,6 +47,13 @@ export default function RoomPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [syncTimedOut, setSyncTimedOut] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  useEffect(() => {
+    if (room?.status === 'playing' || room?.status === 'finished' || game) {
+      setStarting(false);
+    }
+  }, [room?.status, game]);
 
   // Only reset when navigating to a different room code — never on every room socket update
   useEffect(() => {
@@ -54,6 +62,7 @@ export default function RoomPage() {
     setGame(null);
     setSyncTimedOut(false);
     setJoined(false);
+    setStarting(false);
   }, [code, setGame]);
 
   useEffect(() => {
@@ -257,6 +266,16 @@ export default function RoomPage() {
     if (cards.length === 0) {
       return;
     }
+    const reason = explainPlayFailure(
+      cards,
+      game.currentCombination,
+      game.allowFiveConsecutivePairs,
+      dict,
+    );
+    if (reason) {
+      useGameStore.getState().setPlayError(reason);
+      return;
+    }
     playCards(cards);
     clearSelection();
   }
@@ -454,10 +473,13 @@ export default function RoomPage() {
             <button
               type="button"
               className="btn-primary flex-1"
-              disabled={!canStart}
-              onClick={() => startGame()}
+              disabled={!canStart || starting}
+              onClick={() => {
+                setStarting(true);
+                startGame();
+              }}
             >
-              {dict.startGame}
+              {starting ? dict.startingGame : dict.startGame}
             </button>
           )}
         </div>

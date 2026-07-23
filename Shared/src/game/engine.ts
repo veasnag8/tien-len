@@ -123,7 +123,7 @@ export function createGame(
     lastPlaySeat: null,
     passedSeats: new Set(),
     pile: [],
-    turnDeadline: Date.now() + timeoutMs,
+    turnDeadline: Date.now() + timeoutMs + GAME_CONSTANTS.START_COUNTDOWN_MS,
     turnTimeoutMs: timeoutMs,
     rankings: [],
     allowFiveConsecutivePairs,
@@ -247,7 +247,11 @@ export function playCards(
 
   const combination = identifyCombination(cards);
   if (!combination) {
-    return { ok: false, error: 'Invalid combination' };
+    return {
+      ok: false,
+      error:
+        'Invalid combination. Straight (រាង) needs 3+ consecutive ranks (e.g. 3-4-5 … A), no 2s, no duplicate ranks.',
+    };
   }
 
   if (
@@ -259,7 +263,26 @@ export function playCards(
 
   if (state.currentCombination) {
     if (!canBeat(combination, state.currentCombination, state.allowFiveConsecutivePairs)) {
-      return { ok: false, error: 'Combination cannot beat current play' };
+      if (
+        combination.type === CombinationType.Straight &&
+        state.currentCombination.type === CombinationType.Straight &&
+        combination.length !== state.currentCombination.length
+      ) {
+        return {
+          ok: false,
+          error: `Straight must match length (${state.currentCombination.length} cards on table).`,
+        };
+      }
+      if (combination.type !== state.currentCombination.type) {
+        return {
+          ok: false,
+          error: 'Must play the same combination type as the cards on the table (or a valid chop).',
+        };
+      }
+      return {
+        ok: false,
+        error: 'Combination is not higher than the cards on the table.',
+      };
     }
   }
 

@@ -4,6 +4,8 @@ export const GAME_CONSTANTS = {
   /** Always deal this many cards per player (2–4 players); leftover deck unused. */
   HAND_SIZE: 13,
   TURN_TIMEOUT_MS: 30_000,
+  /** Client 3-2-1 overlay before play; added to first turn deadline. */
+  START_COUNTDOWN_MS: 3_000,
   ROOM_CODE_LENGTH: 6,
   MAX_NICKNAME_LENGTH: 24,
   MAX_CHAT_LENGTH: 200,

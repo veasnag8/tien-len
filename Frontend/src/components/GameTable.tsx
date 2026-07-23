@@ -1,11 +1,12 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
-import type { PrivateGameState, RoomInfo } from '@tien-len/shared';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
 import { GameHelpButton } from './GameHelpButton';
+import { StartCountdown } from './StartCountdown';
 import { useAuthStore } from '@/lib/auth-store';
 import { useGameStore } from '@/lib/game-store';
 import { useSettingsStore } from '@/lib/settings-store';
@@ -96,28 +97,107 @@ function OpponentFan({
 export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCheck }: GameTableProps) {
   const user = useAuthStore((s) => s.user);
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
+  const playError = useGameStore((s) => s.playError);
+  const setPlayError = useGameStore((s) => s.setPlayError);
   const toggleCard = useGameStore((s) => s.toggleCard);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
   const me = game.players.find((p) => p.userId === user?.id);
   const mySeat = me?.seatIndex ?? 0;
-  const isMyTurn = me?.seatIndex === game.currentTurnSeat && game.phase === 'playing';
-  const secondsLeft = useCountdown(game.turnDeadline);
+  const gameKey = `${game.roomId}:${game.roundNumber}`;
+  const isFreshDeal = useMemo(
+    () =>
+      game.pile.length === 0 &&
+      game.passedSeats.length === 0 &&
+      game.players.every((p) => p.handCount === 13 || (game.winReason === 'four_twos' && p.hasFinished)),
+    [game.pile.length, game.passedSeats.length, game.players, game.winReason],
+  );
+  const [introDoneKey, setIntroDoneKey] = useState<string | null>(null);
+  const [flyingCards, setFlyingCards] = useState<Card[] | null>(null);
+  const flyStartedAt = useRef(0);
+  const showStartCountdown = isFreshDeal && introDoneKey !== gameKey;
+  const onIntroFinished = useCallback(() => {
+    setIntroDoneKey(gameKey);
+  }, [gameKey]);
 
+  // Auto-hide play error after a few seconds
+  useEffect(() => {
+    if (!playError) {
+      return;
+    }
+    const id = window.setTimeout(() => setPlayError(null), 4500);
+    return () => window.clearTimeout(id);
+  }, [playError, setPlayError]);
+
+  const flyingIds = useMemo(
+    () => new Set(flyingCards?.map((c) => c.id) ?? []),
+    [flyingCards],
+  );
+
+  const isMyTurn =
+    me?.seatIndex === game.currentTurnSeat && game.phase === 'playing' && !showStartCountdown;
+  const livePlay = game.phase === 'playing' && !showStartCountdown;
+  const secondsLeft = useCountdown(showStartCountdown ? null : game.turnDeadline);
+
+  // Keep fly visible ~200ms, then hand off to pile once server confirms
+  useEffect(() => {
+    if (!flyingCards?.length) {
+      return;
+    }
+    const confirmed =
+      flyingCards.every((c) => game.pile.some((p) => p.id === c.id)) ||
+      flyingCards.every((c) => !game.hand.some((h) => h.id === c.id));
+    if (!confirmed) {
+      return;
+    }
+    const wait = Math.max(0, 200 - (Date.now() - flyStartedAt.current));
+    const id = window.setTimeout(() => setFlyingCards(null), wait);
+    return () => window.clearTimeout(id);
+  }, [flyingCards, game.pile, game.hand]);
+
+  // If play was rejected, restore hand quickly
+  useEffect(() => {
+    if (!flyingCards?.length) {
+      return;
+    }
+    const id = window.setTimeout(() => setFlyingCards(null), 900);
+    return () => window.clearTimeout(id);
+  }, [flyingCards]);
+
+  const handlePlay = useCallback(() => {
+    if (!isMyTurn || selectedCardIds.length === 0 || flyingCards) {
+      return;
+    }
+    const cards = game.hand.filter((c) => selectedCardIds.includes(c.id));
+    if (cards.length === 0) {
+      return;
+    }
+    flyStartedAt.current = Date.now();
+    setFlyingCards(cards);
+    onPlay();
+  }, [flyingCards, game.hand, isMyTurn, onPlay, selectedCardIds]);
+
+  // Clear optimistic fly if server rejected the play
+  useEffect(() => {
+    if (playError && flyingCards) {
+      setFlyingCards(null);
+    }
+  }, [playError, flyingCards]);
   // When local timer hits 0, nudge server to auto-pass / advance turn
   useEffect(() => {
-    if (secondsLeft !== 0 || game.phase !== 'playing' || !onTimeoutCheck) {
+    if (showStartCountdown || secondsLeft !== 0 || game.phase !== 'playing' || !onTimeoutCheck) {
       return;
     }
     onTimeoutCheck();
     const id = window.setTimeout(() => onTimeoutCheck(), 400);
     return () => window.clearTimeout(id);
-  }, [secondsLeft, game.phase, game.turnDeadline, onTimeoutCheck]);
+  }, [secondsLeft, game.phase, game.turnDeadline, onTimeoutCheck, showStartCountdown]);
 
-  const finished = game.phase === 'finished';
+  const finished = game.phase === 'finished' && !showStartCountdown;
   const iWon = finished && game.rankings[0] === user?.id;
-  const handCount = game.hand.length;
+  const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
+  const handCount = visibleHand.length;
   const fanSpread = Math.min(22, Math.max(10, 280 / Math.max(handCount, 1)));
 
   const seats: Partial<Record<SeatSlot, (typeof game.players)[0]>> = {};
@@ -128,15 +208,51 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
     if (slot) seats[slot] = p;
   }
 
-  const recentPile = game.pile.slice(-8);
+  // Prefer live fly layer over pile for the same cards (avoids double flash)
+  const recentPile = game.pile
+    .slice(-8)
+    .filter((c) => !flyingIds.has(c.id));
 
   return (
     <div className="game-table relative h-[100dvh] w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#0d6b5c_0%,#064e45_45%,#03352f_100%)] md:h-[min(100dvh,820px)] md:rounded-3xl md:border md:border-[var(--border)]">
+      <StartCountdown active={showStartCountdown} goLabel={dict.go} onFinished={onIntroFinished} />
       <ConfettiBurst active={Boolean(finished && iWon)} />
 
+      {playError && (
+        <div className="absolute inset-x-3 top-14 z-[55] mx-auto max-w-md rounded-xl border border-rose-400/50 bg-rose-950/90 px-3 py-2 text-center text-[12px] leading-snug text-rose-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
+          {playError}
+        </div>
+      )}
+
+      {/* Instant fly-to-table on Play — no network wait */}
+      <AnimatePresence>
+        {flyingCards && flyingCards.length > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+            <div className="flex items-center justify-center gap-1">
+              {flyingCards.map((card, i) => {
+                const mid = (flyingCards.length - 1) / 2;
+                const xFrom = (i - mid) * 16;
+                const xTo = (i - mid) * 26;
+                return (
+                  <motion.div
+                    key={`fly-${card.id}`}
+                    initial={{ y: 160, x: xFrom, scale: 1.05, opacity: 1, rotate: (i - mid) * 4 }}
+                    animate={{ y: 0, x: xTo, scale: 0.92, opacity: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ zIndex: 10 + i }}
+                  >
+                    <PlayingCard card={card} mini disabled />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
       {/* Timer chip — top left */}
       <div className="absolute left-2 top-2 z-20 sm:left-4 sm:top-3">
-        {secondsLeft !== null && game.phase === 'playing' ? (
+        {secondsLeft !== null && livePlay ? (
           <div
             className={`flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold tabular-nums shadow-lg ${
               secondsLeft <= 5
@@ -164,7 +280,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
             const info = room.players.find((r) => r.userId === p.userId);
             const name =
               p.userId === user?.id ? dict.youLabel : (info?.nickname ?? 'P');
-            const turn = p.seatIndex === game.currentTurnSeat && game.phase === 'playing';
+            const turn = p.seatIndex === game.currentTurnSeat && livePlay;
             return (
               <div
                 key={p.userId}
@@ -190,7 +306,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           <OpponentFan
             name={room.players.find((r) => r.userId === seats.top!.userId)?.nickname ?? 'Player'}
             handCount={seats.top.handCount}
-            isTurn={seats.top.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            isTurn={seats.top.seatIndex === game.currentTurnSeat && livePlay}
             slot="top"
           />
         </div>
@@ -202,7 +318,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           <OpponentFan
             name={room.players.find((r) => r.userId === seats.left!.userId)?.nickname ?? 'Player'}
             handCount={seats.left.handCount}
-            isTurn={seats.left.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            isTurn={seats.left.seatIndex === game.currentTurnSeat && livePlay}
             slot="left"
           />
         </div>
@@ -214,7 +330,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
           <OpponentFan
             name={room.players.find((r) => r.userId === seats.right!.userId)?.nickname ?? 'Player'}
             handCount={seats.right.handCount}
-            isTurn={seats.right.seatIndex === game.currentTurnSeat && game.phase === 'playing'}
+            isTurn={seats.right.seatIndex === game.currentTurnSeat && livePlay}
             slot="right"
           />
         </div>
@@ -227,8 +343,8 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
             <button
               type="button"
               className="btn-table-play"
-              disabled={!isMyTurn || selectedCardIds.length === 0}
-              onClick={onPlay}
+              disabled={!isMyTurn || selectedCardIds.length === 0 || Boolean(flyingCards)}
+              onClick={handlePlay}
             >
               {dict.playCards}
             </button>
@@ -242,9 +358,10 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
                 {recentPile.map((card) => (
                   <motion.div
                     key={`${card.id}-${game.pile.indexOf(card)}`}
-                    initial={{ y: 28, opacity: 0, scale: 0.85 }}
+                    initial={{ y: 48, opacity: 0.85, scale: 0.88 }}
                     animate={{ y: 0, opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <PlayingCard card={card} disabled mini />
                   </motion.div>
@@ -279,7 +396,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
       {/* My hand — bottom */}
       <div className="absolute inset-x-0 bottom-0 z-20 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto flex max-w-3xl justify-center px-2">
-          {game.hand.map((card, index) => {
+          {visibleHand.map((card, index) => {
             const selected = selectedCardIds.includes(card.id);
             const center = (handCount - 1) / 2;
             const offset = index - center;
@@ -287,23 +404,25 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
             return (
               <motion.div
                 key={card.id}
+                layout
                 className="relative shrink-0"
                 style={{
                   marginLeft: index === 0 ? 0 : `-${fanSpread * 0.58}px`,
                   zIndex: selected ? 60 : index,
                 }}
                 animate={{
-                  y: selected ? -18 : 0,
+                  y: selected ? -22 : 0,
                   rotate,
+                  scale: selected ? 1.04 : 1,
                 }}
-                transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.6 }}
               >
                 <PlayingCard
                   card={card}
                   selected={selected}
-                  disabled={!isMyTurn}
+                  disabled={!isMyTurn || Boolean(flyingCards)}
                   mini
-                  onClick={() => isMyTurn && toggleCard(card.id)}
+                  onClick={() => isMyTurn && !flyingCards && toggleCard(card.id)}
                 />
               </motion.div>
             );

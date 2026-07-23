@@ -18,16 +18,23 @@ export interface Combination {
   length: number;
 }
 
+/** Coerce rank in case JSON/socket sent strings ("10") instead of numbers. */
+function toRank(rank: Rank | string | number): Rank {
+  return Number(rank) as Rank;
+}
+
 function sameRank(cards: Card[]): boolean {
-  return cards.every((c) => c.rank === cards[0]!.rank);
+  const first = toRank(cards[0]!.rank);
+  return cards.every((c) => toRank(c.rank) === first);
 }
 
 function isConsecutiveRanks(ranks: Rank[]): boolean {
-  if (ranks.some((r) => r === Rank.Two)) {
+  const nums = ranks.map(toRank);
+  if (nums.some((r) => r === Rank.Two)) {
     return false;
   }
-  for (let i = 1; i < ranks.length; i += 1) {
-    if (ranks[i]! !== ranks[i - 1]! + 1) {
+  for (let i = 1; i < nums.length; i += 1) {
+    if (nums[i]! !== nums[i - 1]! + 1) {
       return false;
     }
   }
@@ -37,9 +44,10 @@ function isConsecutiveRanks(ranks: Rank[]): boolean {
 function groupByRank(cards: Card[]): Map<Rank, Card[]> {
   const map = new Map<Rank, Card[]>();
   for (const card of cards) {
-    const group = map.get(card.rank) ?? [];
-    group.push(card);
-    map.set(card.rank, group);
+    const rank = toRank(card.rank);
+    const group = map.get(rank) ?? [];
+    group.push({ ...card, rank });
+    map.set(rank, group);
   }
   return map;
 }
@@ -49,7 +57,9 @@ export function identifyCombination(cards: Card[]): Combination | null {
     return null;
   }
 
-  const sorted = sortCards(cards);
+  // Normalize ranks so "10" + 1 never becomes "101"
+  const normalized = cards.map((c) => ({ ...c, rank: toRank(c.rank) }));
+  const sorted = sortCards(normalized);
   const highestCard = sorted[sorted.length - 1]!;
 
   if (sorted.length === 1) {
@@ -119,6 +129,7 @@ export function identifyCombination(cards: Card[]): Combination | null {
     }
   }
 
+  // Straight (រាង): 3+ consecutive ranks, no 2s, one card per rank (3-4-5 … up to A)
   if (
     sorted.length >= 3 &&
     byRank.size === sorted.length &&
