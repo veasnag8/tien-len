@@ -5,8 +5,10 @@ import {
   CombinationType,
   canBeat,
   cardsBelongToHand,
+  getCarréChopTransfers,
   identifyCombination,
   removeCardsFromHand,
+  type ChopTransfer,
 } from './combinations';
 import { GAME_CONSTANTS } from '../constants';
 
@@ -79,7 +81,7 @@ export function hasFourTwos(hand: Card[]): boolean {
 }
 
 export type MoveResult =
-  | { ok: true; state: InternalGameState; autoPassed?: boolean }
+  | { ok: true; state: InternalGameState; chopTransfers?: ChopTransfer[]; autoPassed?: boolean }
   | { ok: false; error: string; autoPassed?: boolean };
 
 export function createGame(
@@ -337,6 +339,15 @@ export function playCards(
     }
   }
 
+  const victimId =
+    state.lastPlaySeat != null ? (state.players[state.lastPlaySeat]?.userId ?? null) : null;
+  const chopTransfers = getCarréChopTransfers(
+    combination,
+    state.currentCombination,
+    userId,
+    victimId,
+  );
+
   player.hand = removeCardsFromHand(player.hand, cards);
   state.pile = [...state.pile, ...cards];
   state.currentCombination = combination;
@@ -346,13 +357,13 @@ export function playCards(
   if (player.hand.length === 0) {
     markFinished(state, player.seatIndex);
     if (state.rankings.length >= state.playerCount) {
-      return { ok: true, state };
+      return { ok: true, state, chopTransfers };
     }
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
   state.turnDeadline = Date.now() + turnMs(state);
-  return { ok: true, state };
+  return { ok: true, state, chopTransfers };
 }
 
 export function passTurn(state: InternalGameState, userId: string): MoveResult {

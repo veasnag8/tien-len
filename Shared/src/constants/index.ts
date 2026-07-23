@@ -8,6 +8,10 @@ export const GAME_CONSTANTS = {
   START_COUNTDOWN_MS: 3_000,
   /** After a round ends, wait this long then deal the next game automatically. */
   AUTO_NEXT_GAME_MS: 5_000,
+  /** ការ៉េ chops a red 2 (♥♦): attacker +N, victim −N. */
+  CHOP_RED_TWO_POINTS: 3,
+  /** ការ៉េ chops a black 2 (♣♠): attacker +N, victim −N. */
+  CHOP_BLACK_TWO_POINTS: 2,
   ROOM_CODE_LENGTH: 6,
   MAX_NICKNAME_LENGTH: 24,
   MAX_CHAT_LENGTH: 200,

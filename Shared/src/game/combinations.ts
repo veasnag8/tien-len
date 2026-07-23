@@ -1,4 +1,5 @@
-import { Card, Rank, compareCards, sortCards } from '../cards/types';
+import { Card, Rank, compareCards, isRedSuit, sortCards } from '../cards/types';
+import { GAME_CONSTANTS } from '../constants';
 
 export enum CombinationType {
   Single = 'SINGLE',
@@ -16,6 +17,55 @@ export interface Combination {
   cards: Card[];
   highestCard: Card;
   length: number;
+}
+
+/** Instant points when ការ៉េ (four of a kind) chops a 2. */
+export interface ChopTransfer {
+  attackerId: string;
+  victimId: string;
+  /** Positive amount: attacker gains, victim loses. */
+  points: number;
+  choppedCard: Card;
+}
+
+/** Points for chopping one 2 with ការ៉េ (red +3, black +2). */
+export function carréChopPointsForCard(card: Card): number {
+  return isRedSuit(card.suit)
+    ? GAME_CONSTANTS.CHOP_RED_TWO_POINTS
+    : GAME_CONSTANTS.CHOP_BLACK_TWO_POINTS;
+}
+
+/**
+ * If incoming ការ៉េ beats a single/pair of 2s, return instant point transfers.
+ * Red 2 → +3/−3 · Black 2 → +2/−2 (per chopped 2).
+ */
+export function getCarréChopTransfers(
+  incoming: Combination,
+  current: Combination | null,
+  attackerId: string,
+  victimId: string | null,
+): ChopTransfer[] {
+  if (!current || !victimId || victimId === attackerId) {
+    return [];
+  }
+  if (incoming.type !== CombinationType.FourOfAKind) {
+    return [];
+  }
+
+  const isSingleTwo =
+    current.type === CombinationType.Single && toRank(current.highestCard.rank) === Rank.Two;
+  const isPairTwos =
+    current.type === CombinationType.Pair && toRank(current.highestCard.rank) === Rank.Two;
+  if (!isSingleTwo && !isPairTwos) {
+    return [];
+  }
+
+  return current.cards.map((choppedCard) => ({
+    attackerId,
+    victimId,
+    points: carréChopPointsForCard(choppedCard),
+    choppedCard,
+  }));
 }
 
 /** Coerce rank in case JSON/socket sent strings ("10") instead of numbers. */

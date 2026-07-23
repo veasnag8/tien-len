@@ -69,6 +69,7 @@ export function GameHelpButton() {
               <li>• {dict.rule6}</li>
               <li>• {dict.rule7}</li>
               <li>• {dict.rule8}</li>
+              <li>• {dict.ruleCarre}</li>
               <li>• {dict.ruleSuit}</li>
               <li>• {dict.rulePoints}</li>
             </ul>

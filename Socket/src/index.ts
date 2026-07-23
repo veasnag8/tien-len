@@ -1,6 +1,7 @@
 import type {
   Card,
   ChatMessage,
+  ChopTransfer,
   PrivateGameState,
   PublicGameState,
   RoomInfo,
@@ -40,6 +41,8 @@ export const SocketEvents = {
   GAME_CHECK_TIMEOUT: 'game:check_timeout',
   GAME_FINISHED: 'game:finished',
   GAME_ERROR: 'game:error',
+  /** ការ៉េ chopped a 2 — instant point transfer. */
+  GAME_CHOP: 'game:chop',
 
   CHAT_SEND: 'chat:send',
   CHAT_MESSAGE: 'chat:message',
@@ -133,6 +136,7 @@ export interface ServerToClientEvents {
   }) => void;
   [SocketEvents.GAME_TIMEOUT]: (payload: { userId: string }) => void;
   [SocketEvents.GAME_ERROR]: (payload: SocketErrorPayload) => void;
+  [SocketEvents.GAME_CHOP]: (payload: { transfers: ChopTransfer[] }) => void;
   [SocketEvents.CHAT_MESSAGE]: (payload: { message: ChatMessage }) => void;
   [SocketEvents.PLAYER_RECONNECTED]: (payload: { userId: string }) => void;
   [SocketEvents.PLAYER_DISCONNECTED]: (payload: { userId: string }) => void;

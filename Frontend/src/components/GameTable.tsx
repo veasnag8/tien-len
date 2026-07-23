@@ -100,7 +100,9 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const playError = useGameStore((s) => s.playError);
   const nextGameAt = useGameStore((s) => s.nextGameAt);
+  const chopTransfers = useGameStore((s) => s.chopTransfers);
   const setPlayError = useGameStore((s) => s.setPlayError);
+  const setChopTransfers = useGameStore((s) => s.setChopTransfers);
   const toggleCard = useGameStore((s) => s.toggleCard);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
@@ -183,6 +185,31 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
       useGameStore.getState().setNextGameAt(Date.now() + 5_000);
     }
   }, [finished, nextGameAt]);
+
+  useEffect(() => {
+    if (!chopTransfers?.length) {
+      return;
+    }
+    const id = window.setTimeout(() => setChopTransfers(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [chopTransfers, setChopTransfers]);
+
+  const chopBanner = useMemo(() => {
+    if (!chopTransfers?.length) {
+      return null;
+    }
+    const pts = chopTransfers.reduce((sum, t) => sum + t.points, 0);
+    const attackerId = chopTransfers[0]!.attackerId;
+    const victimId = chopTransfers[0]!.victimId;
+    const attacker =
+      room.players.find((p) => p.userId === attackerId)?.nickname ?? attackerId.slice(0, 6);
+    const victim =
+      room.players.find((p) => p.userId === victimId)?.nickname ?? victimId.slice(0, 6);
+    return dict.chopToast
+      .replace('{attacker}', attacker)
+      .replace('{victim}', victim)
+      .replaceAll('{pts}', String(pts));
+  }, [chopTransfers, dict.chopToast, room.players]);
   // Hand already optimistic-trimmed; also hide any still-flying ids
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
@@ -205,6 +232,12 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
       {playError && (
         <div className="absolute inset-x-3 top-14 z-[55] mx-auto max-w-md rounded-xl border border-rose-400/50 bg-rose-950/90 px-3 py-2 text-center text-[12px] leading-snug text-rose-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
           {playError}
+        </div>
+      )}
+
+      {chopBanner && (
+        <div className="absolute inset-x-3 top-14 z-[56] mx-auto max-w-md rounded-xl border border-amber-400/50 bg-amber-950/90 px-3 py-2 text-center text-[12px] font-semibold leading-snug text-amber-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
+          {chopBanner}
         </div>
       )}
 

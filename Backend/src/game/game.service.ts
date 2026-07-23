@@ -10,6 +10,7 @@ import {
   toPrivateState,
   toPublicState,
   type Card,
+  type ChopTransfer,
   type InternalGameState,
   type PrivateGameState,
   type PublicGameState,
@@ -127,7 +128,11 @@ export class GameService {
     userId: string,
     cards: Card[],
     requestId: string,
-  ): Promise<{ publicState: PublicGameState; privateStates: Map<string, PrivateGameState> }> {
+  ): Promise<{
+    publicState: PublicGameState;
+    privateStates: Map<string, PrivateGameState>;
+    chopTransfers: ChopTransfer[];
+  }> {
     await this.ensureUniqueRequest(requestId);
     const state = await this.loadState(roomId);
     const result = playCards(state, userId, cards);
@@ -135,10 +140,38 @@ export class GameService {
       throw new Error(result.error);
     }
     await this.saveState(result.state);
+
+    const chopTransfers = result.chopTransfers ?? [];
+    if (chopTransfers.length > 0) {
+      await this.applyChopTransfers(chopTransfers);
+    }
+
     if (result.state.phase === 'finished') {
       await this.finalizeGame(result.state);
     }
-    return this.snapshot(result.state);
+    return { ...this.snapshot(result.state), chopTransfers };
+  }
+
+  /** Instant ±points when ការ៉េ chops a 2. */
+  private async applyChopTransfers(transfers: ChopTransfer[]): Promise<void> {
+    const byUser = new Map<string, number>();
+    for (const t of transfers) {
+      byUser.set(t.attackerId, (byUser.get(t.attackerId) ?? 0) + t.points);
+      byUser.set(t.victimId, (byUser.get(t.victimId) ?? 0) - t.points);
+    }
+    for (const [userId, delta] of byUser) {
+      if (delta === 0) {
+        continue;
+      }
+      try {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { points: { increment: delta } },
+        });
+      } catch {
+        // guest / missing user
+      }
+    }
   }
 
   async pass(
