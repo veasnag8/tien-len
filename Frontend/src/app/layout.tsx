@@ -10,6 +10,7 @@ import { APP_NAME, APP_NAME_EN } from '@/lib/config';
 export const metadata: Metadata = {
   title: `${APP_NAME} · ${APP_NAME_EN}`,
   description: 'Online multiplayer Tien Len — Khmer & English',
+  applicationName: APP_NAME,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
