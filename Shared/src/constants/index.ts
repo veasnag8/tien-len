@@ -6,6 +6,8 @@ export const GAME_CONSTANTS = {
   TURN_TIMEOUT_MS: 30_000,
   /** Client 3-2-1 overlay before play; added to first turn deadline. */
   START_COUNTDOWN_MS: 3_000,
+  /** After a round ends, wait this long then deal the next game automatically. */
+  AUTO_NEXT_GAME_MS: 5_000,
   ROOM_CODE_LENGTH: 6,
   MAX_NICKNAME_LENGTH: 24,
   MAX_CHAT_LENGTH: 200,

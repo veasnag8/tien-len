@@ -99,6 +99,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   const user = useAuthStore((s) => s.user);
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const playError = useGameStore((s) => s.playError);
+  const nextGameAt = useGameStore((s) => s.nextGameAt);
   const setPlayError = useGameStore((s) => s.setPlayError);
   const toggleCard = useGameStore((s) => s.toggleCard);
   const locale = useSettingsStore((s) => s.locale);
@@ -173,7 +174,15 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   }, [secondsLeft, game.phase, game.turnDeadline, onTimeoutCheck, showStartCountdown]);
 
   const finished = game.phase === 'finished' && !showStartCountdown;
+  const nextGameSecondsLeft = useCountdown(finished ? nextGameAt : null);
   const iWon = finished && game.rankings[0] === user?.id;
+
+  // Fallback if GAME_FINISHED event was missed
+  useEffect(() => {
+    if (finished && nextGameAt == null) {
+      useGameStore.getState().setNextGameAt(Date.now() + 5_000);
+    }
+  }, [finished, nextGameAt]);
   // Hand already optimistic-trimmed; also hide any still-flying ids
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
@@ -362,7 +371,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
             </button>
           ) : (
             <button type="button" className="btn-table-play !px-4" onClick={onPlayAgain}>
-              {dict.playAgain}
+              {dict.startNow}
             </button>
           )}
         </div>
@@ -435,6 +444,12 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
               );
             })}
           </ol>
+          <p className="mt-3 text-center text-xs font-medium text-amber-200/90">
+            {dict.nextGameIn.replace(
+              '{n}',
+              String(Math.max(0, nextGameSecondsLeft ?? 0)),
+            )}
+          </p>
         </div>
       )}
     </div>

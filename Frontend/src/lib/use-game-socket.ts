@@ -123,8 +123,17 @@ function attachSocketListeners(socket: Socket): void {
   socket.on(SocketEvents.CHAT_MESSAGE, (payload: { message: import('@tien-len/shared').ChatMessage }) => {
     useGameStore.getState().addChat(payload.message);
   });
-  socket.on(SocketEvents.GAME_FINISHED, () => {
+  socket.on(SocketEvents.GAME_FINISHED, (payload: {
+    rankings: string[];
+    state: import('@tien-len/shared').PublicGameState;
+    nextGameAt?: number;
+  }) => {
     sounds.play('win', useSettingsStore.getState().soundEnabled);
+    if (payload.nextGameAt) {
+      useGameStore.getState().setNextGameAt(payload.nextGameAt);
+    } else {
+      useGameStore.getState().setNextGameAt(Date.now() + 5_000);
+    }
   });
   socket.on(SocketEvents.GAME_TIMEOUT, () => {
     sounds.play('countdown', useSettingsStore.getState().soundEnabled);

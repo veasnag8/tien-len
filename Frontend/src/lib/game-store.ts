@@ -11,12 +11,15 @@ interface GameStore {
   selectedCardIds: string[];
   playError: string | null;
   roomExitReason: 'left' | 'kicked' | 'closed' | 'disconnect' | null;
+  /** When the next round auto-starts (epoch ms). */
+  nextGameAt: number | null;
   /** Full game snapshot before optimistic play (for rollback). */
   gameBackup: PrivateGameState | null;
   pendingPlayIds: string[];
   setRoom: (room: RoomInfo | null) => void;
   setQrDataUrl: (url: string | null) => void;
   setGame: (game: PrivateGameState | null) => void;
+  setNextGameAt: (at: number | null) => void;
   mergePublicGame: (publicState: PublicGameState | PrivateGameState, userId?: string) => boolean;
   addChat: (message: ChatMessage) => void;
   toggleCard: (cardId: string) => void;
@@ -55,6 +58,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedCardIds: [],
   playError: null,
   roomExitReason: null,
+  nextGameAt: null,
   gameBackup: null,
   pendingPlayIds: [],
   setRoom: (room) => set({ room }),
@@ -64,7 +68,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       game,
       gameBackup: null,
       pendingPlayIds: [],
+      nextGameAt: game?.phase === 'finished' ? get().nextGameAt : null,
     }),
+  setNextGameAt: (nextGameAt) => set({ nextGameAt }),
   mergePublicGame: (publicState, userId) => {
     const current = get().game;
     if (!current || !('hand' in current)) {
@@ -140,6 +146,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       chat: [],
       selectedCardIds: [],
       playError: null,
+      nextGameAt: null,
       gameBackup: null,
       pendingPlayIds: [],
       roomExitReason: reason,
@@ -153,6 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       chat: [],
       selectedCardIds: [],
       playError: null,
+      nextGameAt: null,
       gameBackup: null,
       pendingPlayIds: [],
       roomExitReason: null,

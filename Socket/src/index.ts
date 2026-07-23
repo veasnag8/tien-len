@@ -128,6 +128,8 @@ export interface ServerToClientEvents {
   [SocketEvents.GAME_FINISHED]: (payload: {
     rankings: string[];
     state: PublicGameState;
+    /** Epoch ms when the next round auto-starts (server). */
+    nextGameAt?: number;
   }) => void;
   [SocketEvents.GAME_TIMEOUT]: (payload: { userId: string }) => void;
   [SocketEvents.GAME_ERROR]: (payload: SocketErrorPayload) => void;

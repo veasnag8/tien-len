@@ -54,8 +54,41 @@ export class GameService {
       throw new Error('All players must be ready');
     }
 
+    return this.dealNewRound(roomId, room);
+  }
+
+  /** Start the next round after a finished game (no host/ready gate). */
+  async startNextRound(roomId: string): Promise<{
+    publicState: PublicGameState;
+    privateStates: Map<string, PrivateGameState>;
+  }> {
+    const room = await this.rooms.getRoomInfo(roomId);
+    if (room.players.length < 2) {
+      throw new Error('Need at least 2 players');
+    }
+
+    const raw = await this.redis.get(this.gameKey(roomId));
+    if (raw) {
+      const existing = this.deserialize(raw);
+      if (existing.phase !== 'finished') {
+        throw new Error('Game still in progress');
+      }
+    }
+
+    return this.dealNewRound(roomId, room);
+  }
+
+  private async dealNewRound(
+    roomId: string,
+    room: Awaited<ReturnType<RoomsService['getRoomInfo']>>,
+  ): Promise<{
+    publicState: PublicGameState;
+    privateStates: Map<string, PrivateGameState>;
+  }> {
     const ordered = [...room.players].sort((a, b) => a.seatIndex - b.seatIndex);
     const lastWinner = await this.redis.get(this.lastWinnerKey(roomId));
+    const prevRaw = await this.redis.get(this.gameKey(roomId));
+    const prevRound = prevRaw ? this.deserialize(prevRaw).roundNumber : 0;
     const state = createGame(
       roomId,
       ordered.map((p) => p.userId),
@@ -63,6 +96,7 @@ export class GameService {
       Math.random,
       room.settings.turnTimeoutMs ?? 30_000,
       lastWinner,
+      prevRound + 1,
     );
 
     await this.saveState(state);

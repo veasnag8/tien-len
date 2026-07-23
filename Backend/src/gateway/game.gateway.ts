@@ -57,6 +57,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly turnTimers = new Map<string, NodeJS.Timeout>();
   /** Auto-leave after disconnect if they do not reconnect in time. */
   private readonly disconnectLeaveTimers = new Map<string, NodeJS.Timeout>();
+  /** After a finished round, deal the next game automatically. */
+  private readonly nextGameTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -154,6 +156,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!room) {
       // 0 left, or 2-player game dropped to 1 → room closed
       this.clearTurnTimer(roomId);
+      this.clearNextGameTimer(roomId);
       await this.game.clearSession(roomId).catch(() => undefined);
       this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, {
         roomId,
@@ -170,10 +173,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.broadcastGame(roomId, snap);
         this.scheduleTurnTimer(roomId, snap.publicState.turnDeadline);
         if (snap.publicState.phase === 'finished') {
-          this.server.to(roomId).emit(SocketEvents.GAME_FINISHED, {
-            rankings: snap.publicState.rankings,
-            state: snap.publicState,
-          });
+          this.emitFinishedAndScheduleNext(roomId, snap);
         }
       }
     }
@@ -267,6 +267,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.scheduleTurnTimer(data.roomId, snap.publicState.turnDeadline);
       const room = await this.rooms.getRoomInfo(data.roomId);
       this.server.to(data.roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+      if (snap.publicState.phase === 'finished') {
+        this.emitFinishedAndScheduleNext(data.roomId, snap);
+      }
     } catch (error) {
       client.emit(SocketEvents.GAME_ERROR, {
         code: 'START_FAILED',
@@ -332,6 +335,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const roomId = data.roomId;
     this.clearTurnTimer(roomId);
+    this.clearNextGameTimer(roomId);
     // Cancel pending disconnect leaves for everyone in this room
     for (const key of [...this.disconnectLeaveTimers.keys()]) {
       if (key.startsWith(`${roomId}:`)) {
@@ -355,10 +359,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.userId || !data.roomId) {
       return;
     }
-    this.clearTurnTimer(data.roomId);
-    await this.game.clearGame(data.roomId);
-    const room = await this.rooms.resetReady(data.roomId);
-    this.server.to(data.roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+    // Skip the wait — start the next round now
+    this.clearNextGameTimer(data.roomId);
+    await this.runNextGame(data.roomId);
   }
 
   @SubscribeMessage(SocketEvents.GAME_REQUEST_STATE)
@@ -413,10 +416,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.broadcastGame(data.roomId, snap);
       this.scheduleTurnTimer(data.roomId, snap.publicState.turnDeadline);
       if (snap.publicState.phase === 'finished') {
-        this.server.to(data.roomId).emit(SocketEvents.GAME_FINISHED, {
-          rankings: snap.publicState.rankings,
-          state: snap.publicState,
-        });
+        this.emitFinishedAndScheduleNext(data.roomId, snap);
       }
     } catch (error) {
       client.emit(SocketEvents.GAME_ERROR, {
@@ -637,10 +637,63 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.broadcastGame(roomId, result);
     this.scheduleTurnTimer(roomId, result.publicState.turnDeadline);
     if (result.publicState.phase === 'finished') {
-      this.server.to(roomId).emit(SocketEvents.GAME_FINISHED, {
-        rankings: result.publicState.rankings,
-        state: result.publicState,
-      });
+      this.emitFinishedAndScheduleNext(roomId, result);
+    }
+  }
+
+  private emitFinishedAndScheduleNext(
+    roomId: string,
+    snap: {
+      publicState: import('@tien-len/shared').PublicGameState;
+      privateStates: Map<string, import('@tien-len/shared').PrivateGameState>;
+    },
+  ): void {
+    const nextGameAt = Date.now() + GAME_CONSTANTS.AUTO_NEXT_GAME_MS;
+    this.server.to(roomId).emit(SocketEvents.GAME_FINISHED, {
+      rankings: snap.publicState.rankings,
+      state: snap.publicState,
+      nextGameAt,
+    });
+    this.scheduleNextGame(roomId);
+  }
+
+  private scheduleNextGame(roomId: string): void {
+    this.clearNextGameTimer(roomId);
+    const timer = setTimeout(() => {
+      void this.runNextGame(roomId);
+    }, GAME_CONSTANTS.AUTO_NEXT_GAME_MS);
+    this.nextGameTimers.set(roomId, timer);
+  }
+
+  private clearNextGameTimer(roomId: string): void {
+    const existing = this.nextGameTimers.get(roomId);
+    if (existing) {
+      clearTimeout(existing);
+      this.nextGameTimers.delete(roomId);
+    }
+  }
+
+  private async runNextGame(roomId: string): Promise<void> {
+    this.nextGameTimers.delete(roomId);
+    this.clearTurnTimer(roomId);
+    try {
+      const snap = await this.game.startNextRound(roomId);
+      this.broadcastGame(roomId, snap);
+      this.scheduleTurnTimer(roomId, snap.publicState.turnDeadline);
+      const room = await this.rooms.getRoomInfo(roomId);
+      this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+      if (snap.publicState.phase === 'finished') {
+        this.emitFinishedAndScheduleNext(roomId, snap);
+      }
+    } catch {
+      // Not enough players or race — return to lobby
+      await this.game.clearGame(roomId).catch(() => undefined);
+      try {
+        const room = await this.rooms.resetReady(roomId);
+        this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+      } catch {
+        // room may already be closed
+      }
     }
   }
 

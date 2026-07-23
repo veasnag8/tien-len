@@ -90,6 +90,7 @@ export function createGame(
   turnTimeoutMs: number = GAME_CONSTANTS.TURN_TIMEOUT_MS,
   /** Previous winner leads next game; omit on first game so 3♠ opens. */
   leadUserId?: string | null,
+  roundNumber: number = 1,
 ): InternalGameState {
   const playerCount = userIds.length as 2 | 3 | 4;
   if (playerCount < GAME_CONSTANTS.MIN_PLAYERS || playerCount > GAME_CONSTANTS.MAX_PLAYERS) {
@@ -127,7 +128,7 @@ export function createGame(
     turnTimeoutMs: timeoutMs,
     rankings: [],
     allowFiveConsecutivePairs,
-    roundNumber: 1,
+    roundNumber: Math.max(1, Math.floor(roundNumber)),
     finishedCount: 0,
     winReason: null,
   };
