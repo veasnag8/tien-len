@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
@@ -115,7 +115,6 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   );
   const [introDoneKey, setIntroDoneKey] = useState<string | null>(null);
   const [flyingCards, setFlyingCards] = useState<Card[] | null>(null);
-  const flyStartedAt = useRef(0);
   const showStartCountdown = isFreshDeal && introDoneKey !== gameKey;
   const onIntroFinished = useCallback(() => {
     setIntroDoneKey(gameKey);
@@ -140,31 +139,6 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
   const livePlay = game.phase === 'playing' && !showStartCountdown;
   const secondsLeft = useCountdown(showStartCountdown ? null : game.turnDeadline);
 
-  // Keep fly visible ~200ms, then hand off to pile once server confirms
-  useEffect(() => {
-    if (!flyingCards?.length) {
-      return;
-    }
-    const confirmed =
-      flyingCards.every((c) => game.pile.some((p) => p.id === c.id)) ||
-      flyingCards.every((c) => !game.hand.some((h) => h.id === c.id));
-    if (!confirmed) {
-      return;
-    }
-    const wait = Math.max(0, 200 - (Date.now() - flyStartedAt.current));
-    const id = window.setTimeout(() => setFlyingCards(null), wait);
-    return () => window.clearTimeout(id);
-  }, [flyingCards, game.pile, game.hand]);
-
-  // If play was rejected, restore hand quickly
-  useEffect(() => {
-    if (!flyingCards?.length) {
-      return;
-    }
-    const id = window.setTimeout(() => setFlyingCards(null), 900);
-    return () => window.clearTimeout(id);
-  }, [flyingCards]);
-
   const handlePlay = useCallback(() => {
     if (!isMyTurn || selectedCardIds.length === 0 || flyingCards) {
       return;
@@ -173,17 +147,20 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
     if (cards.length === 0) {
       return;
     }
-    flyStartedAt.current = Date.now();
+    // Animate to table; hand is removed optimistically inside onPlay
     setFlyingCards(cards);
     onPlay();
+    // End fly overlay quickly — cards already gone from hand + on pile
+    window.setTimeout(() => setFlyingCards(null), 220);
   }, [flyingCards, game.hand, isMyTurn, onPlay, selectedCardIds]);
 
-  // Clear optimistic fly if server rejected the play
+  // Rejected play → hand restored in store; drop fly overlay
   useEffect(() => {
-    if (playError && flyingCards) {
+    if (playError) {
       setFlyingCards(null);
     }
-  }, [playError, flyingCards]);
+  }, [playError]);
+
   // When local timer hits 0, nudge server to auto-pass / advance turn
   useEffect(() => {
     if (showStartCountdown || secondsLeft !== 0 || game.phase !== 'playing' || !onTimeoutCheck) {
@@ -196,6 +173,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
 
   const finished = game.phase === 'finished' && !showStartCountdown;
   const iWon = finished && game.rankings[0] === user?.id;
+  // Hand already optimistic-trimmed; also hide any still-flying ids
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
   const fanSpread = Math.min(22, Math.max(10, 280 / Math.max(handCount, 1)));
@@ -208,11 +186,7 @@ export function GameTable({ room, game, onPlay, onPass, onPlayAgain, onTimeoutCh
     if (slot) seats[slot] = p;
   }
 
-  // Prefer live fly layer over pile for the same cards (avoids double flash)
-  const recentPile = game.pile
-    .slice(-8)
-    .filter((c) => !flyingIds.has(c.id));
-
+  const recentPile = game.pile.slice(-8).filter((c) => !flyingIds.has(c.id));
   return (
     <div className="game-table relative h-[100dvh] w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#0d6b5c_0%,#064e45_45%,#03352f_100%)] md:h-[min(100dvh,820px)] md:rounded-3xl md:border md:border-[var(--border)]">
       <StartCountdown active={showStartCountdown} goLabel={dict.go} onFinished={onIntroFinished} />

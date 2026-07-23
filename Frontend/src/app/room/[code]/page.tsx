@@ -26,7 +26,6 @@ export default function RoomPage() {
   const game = useGameStore((s) => s.game);
   const chat = useGameStore((s) => s.chat);
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
-  const clearSelection = useGameStore((s) => s.clearSelection);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
@@ -262,6 +261,10 @@ export default function RoomPage() {
     if (!game) {
       return;
     }
+    const userId = user?.id;
+    if (!userId) {
+      return;
+    }
     const cards = game.hand.filter((c) => selectedCardIds.includes(c.id));
     if (cards.length === 0) {
       return;
@@ -276,8 +279,9 @@ export default function RoomPage() {
       useGameStore.getState().setPlayError(reason);
       return;
     }
+    // Remove from hand instantly — no jump-back while waiting for socket
+    useGameStore.getState().applyOptimisticPlay(userId, cards);
     playCards(cards);
-    clearSelection();
   }
 
   if ((!LITE_MODE && (loading || !user)) || (LITE_MODE && loading && !joined)) {

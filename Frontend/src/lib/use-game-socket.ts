@@ -100,21 +100,15 @@ function attachSocketListeners(socket: Socket): void {
   socket.on(SocketEvents.GAME_STATE, (payload: {
     state: import('@tien-len/shared').PrivateGameState | import('@tien-len/shared').PublicGameState;
   }) => {
-    const current = useGameStore.getState().game;
     const userId = useAuthStore.getState().user?.id;
-    // Public broadcast has no hand — keep ours, but resync if handCount drifted
+    const current = useGameStore.getState().game;
     if (current && 'hand' in current && Array.isArray(current.hand)) {
-      const me = payload.state.players.find((p) => p.userId === userId);
-      useGameStore.getState().setGame({
-        ...payload.state,
-        hand: current.hand,
-      } as import('@tien-len/shared').PrivateGameState);
-      if (me && me.handCount !== current.hand.length) {
+      const needResync = useGameStore.getState().mergePublicGame(payload.state, userId);
+      if (needResync) {
         socket.emit(SocketEvents.GAME_REQUEST_STATE);
       }
       return;
     }
-    // If payload already includes a hand (some paths), take it
     if ('hand' in payload.state && Array.isArray((payload.state as { hand?: unknown }).hand)) {
       useGameStore.getState().setGame(payload.state as import('@tien-len/shared').PrivateGameState);
     }
@@ -135,11 +129,9 @@ function attachSocketListeners(socket: Socket): void {
   socket.on(SocketEvents.GAME_ERROR, (payload: { code: string; message: string }) => {
     console.warn('[socket] game error', payload.code, payload.message);
     const locale = useSettingsStore.getState().locale;
+    useGameStore.getState().rollbackOptimisticPlay();
     useGameStore.getState().setPlayError(localizeServerPlayError(payload.message, t(locale)));
-    // Stale hand after missed private updates — pull fresh private state
-    if (/not in hand|មិននៅក្នុងដៃ/i.test(payload.message)) {
-      socket.emit(SocketEvents.GAME_REQUEST_STATE);
-    }
+    socket.emit(SocketEvents.GAME_REQUEST_STATE);
   });
 }
 
