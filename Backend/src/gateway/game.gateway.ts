@@ -55,6 +55,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   private readonly turnTimers = new Map<string, NodeJS.Timeout>();
+  /** Auto-leave after disconnect if they do not reconnect in time. */
+  private readonly disconnectLeaveTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly jwt: JwtService,
@@ -88,11 +90,70 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.userId || !data.roomId) {
       return;
     }
-    const room = await this.rooms.setConnected(data.roomId, data.userId, false);
-    this.server.to(data.roomId).emit(SocketEvents.PLAYER_DISCONNECTED, {
-      userId: data.userId,
-    });
-    this.server.to(data.roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+    const roomId = data.roomId;
+    const userId = data.userId;
+    try {
+      const room = await this.rooms.setConnected(roomId, userId, false);
+      this.server.to(roomId).emit(SocketEvents.PLAYER_DISCONNECTED, { userId });
+      this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+
+      // Waiting lobby: leave soon. In-game: allow reconnect grace, then leave.
+      const graceMs =
+        room.status === 'playing'
+          ? GAME_CONSTANTS.RECONNECT_GRACE_MS
+          : 12_000;
+      this.scheduleDisconnectLeave(roomId, userId, graceMs);
+    } catch {
+      // room may already be gone
+    }
+  }
+
+  private disconnectKey(roomId: string, userId: string): string {
+    return `${roomId}:${userId}`;
+  }
+
+  private clearDisconnectLeave(roomId: string, userId: string): void {
+    const key = this.disconnectKey(roomId, userId);
+    const timer = this.disconnectLeaveTimers.get(key);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectLeaveTimers.delete(key);
+    }
+  }
+
+  private scheduleDisconnectLeave(roomId: string, userId: string, graceMs: number): void {
+    this.clearDisconnectLeave(roomId, userId);
+    const key = this.disconnectKey(roomId, userId);
+    const timer = setTimeout(() => {
+      void this.autoLeaveAfterDisconnect(roomId, userId);
+    }, graceMs);
+    this.disconnectLeaveTimers.set(key, timer);
+  }
+
+  private async autoLeaveAfterDisconnect(roomId: string, userId: string): Promise<void> {
+    this.clearDisconnectLeave(roomId, userId);
+    try {
+      const info = await this.rooms.getRoomInfo(roomId);
+      const player = info.players.find((p) => p.userId === userId);
+      if (!player || player.isConnected) {
+        return;
+      }
+      const room = await this.rooms.leaveRoom(userId, roomId);
+      if (!room) {
+        // Last player left — close room + game
+        this.clearTurnTimer(roomId);
+        await this.game.clearSession(roomId).catch(() => undefined);
+        this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, {
+          roomId,
+          reason: 'closed',
+        });
+        this.server.in(roomId).socketsLeave(roomId);
+        return;
+      }
+      this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+    } catch {
+      // ignore
+    }
   }
 
   @SubscribeMessage(SocketEvents.AUTH_IDENTIFY)
@@ -123,6 +184,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const userId = this.requireUser(client);
       const room = await this.rooms.joinRoom(userId, payload.code);
+      this.clearDisconnectLeave(room.id, userId);
       await this.joinSocketRoom(client, room.id);
       client.emit(SocketEvents.ROOM_JOINED, { room });
       this.server.to(room.id).emit(SocketEvents.ROOM_UPDATE, { room });
@@ -147,13 +209,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
     const roomId = data.roomId;
-    const room = await this.rooms.leaveRoom(data.userId, roomId);
+    const userId = data.userId;
+    this.clearDisconnectLeave(roomId, userId);
+    const room = await this.rooms.leaveRoom(userId, roomId);
     client.leave(roomId);
     data.roomId = undefined;
-    client.emit(SocketEvents.ROOM_LEFT, { roomId });
-    if (room) {
-      this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
+    client.emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'left' });
+    if (!room) {
+      this.clearTurnTimer(roomId);
+      await this.game.clearSession(roomId).catch(() => undefined);
+      this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'closed' });
+      this.server.in(roomId).socketsLeave(roomId);
+      return;
     }
+    this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
   }
 
   @SubscribeMessage(SocketEvents.ROOM_READY)
@@ -198,9 +267,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.userId || !data.roomId) {
       return;
     }
-    const room = await this.rooms.kickPlayer(data.userId, data.roomId, payload.userId);
-    this.server.to(data.roomId).emit(SocketEvents.ROOM_UPDATE, { room });
-    this.server.to(data.roomId).emit(SocketEvents.ROOM_LEFT, { roomId: data.roomId });
+    const roomId = data.roomId;
+    const targetUserId = payload.userId;
+    const room = await this.rooms.kickPlayer(data.userId, roomId, targetUserId);
+    this.clearDisconnectLeave(roomId, targetUserId);
+
+    // Notify only the kicked player — do not ROOM_LEFT the whole room
+    const nsp = this.gameNamespace();
+    try {
+      const sockets = (await nsp.in(roomId).fetchSockets()) as Array<{
+        data: SocketData;
+        emit: (event: string, payload: unknown) => void;
+        leave: (room: string) => void;
+      }>;
+      for (const socket of sockets) {
+        if (socket.data.userId === targetUserId) {
+          socket.emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'kicked' });
+          socket.leave(roomId);
+          socket.data.roomId = undefined;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    this.server.to(roomId).emit(SocketEvents.ROOM_UPDATE, { room });
   }
 
   @SubscribeMessage(SocketEvents.ROOM_TRANSFER_HOST)
@@ -224,9 +315,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const roomId = data.roomId;
     this.clearTurnTimer(roomId);
+    // Cancel pending disconnect leaves for everyone in this room
+    for (const key of [...this.disconnectLeaveTimers.keys()]) {
+      if (key.startsWith(`${roomId}:`)) {
+        const timer = this.disconnectLeaveTimers.get(key);
+        if (timer) {
+          clearTimeout(timer);
+        }
+        this.disconnectLeaveTimers.delete(key);
+      }
+    }
     await this.game.clearSession(roomId);
     await this.rooms.closeRoom(data.userId, roomId);
-    this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, { roomId });
+    this.server.to(roomId).emit(SocketEvents.ROOM_LEFT, { roomId, reason: 'closed' });
     this.server.in(roomId).socketsLeave(roomId);
   }
 
@@ -381,6 +482,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     const userId = this.requireUser(client);
     const room = await this.rooms.joinRoom(userId, payload.roomCode);
+    this.clearDisconnectLeave(room.id, userId);
     await this.joinSocketRoom(client, room.id);
     this.server.to(room.id).emit(SocketEvents.PLAYER_RECONNECTED, { userId });
     this.server.to(room.id).emit(SocketEvents.ROOM_UPDATE, { room });

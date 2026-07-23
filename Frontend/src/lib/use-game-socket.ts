@@ -113,6 +113,13 @@ function attachSocketListeners(socket: Socket): void {
       useGameStore.getState().setGame(payload.state as import('@tien-len/shared').PrivateGameState);
     }
   });
+  socket.on(SocketEvents.ROOM_LEFT, (payload: {
+    roomId: string;
+    reason?: 'left' | 'kicked' | 'closed' | 'disconnect';
+  }) => {
+    pendingRoomCode = null;
+    useGameStore.getState().forceRoomExit(payload.reason ?? 'left');
+  });
   socket.on(SocketEvents.CHAT_MESSAGE, (payload: { message: import('@tien-len/shared').ChatMessage }) => {
     useGameStore.getState().addChat(payload.message);
   });
@@ -225,7 +232,7 @@ export function useGameSocket() {
 
   const leaveRoom = useCallback(() => {
     pendingRoomCode = null;
-    socketRef.current?.emit(SocketEvents.ROOM_LEAVE);
+    getOrCreateSocket()?.emit(SocketEvents.ROOM_LEAVE);
   }, []);
 
   const setReady = useCallback((ready: boolean) => {

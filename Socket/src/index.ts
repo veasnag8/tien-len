@@ -117,7 +117,10 @@ export interface ServerToClientEvents {
   [SocketEvents.AUTH_IDENTIFIED]: (payload: { user: UserProfile }) => void;
   [SocketEvents.ROOM_CREATED]: (payload: { room: RoomInfo; qrDataUrl: string }) => void;
   [SocketEvents.ROOM_JOINED]: (payload: { room: RoomInfo }) => void;
-  [SocketEvents.ROOM_LEFT]: (payload: { roomId: string }) => void;
+  [SocketEvents.ROOM_LEFT]: (payload: {
+    roomId: string;
+    reason?: 'left' | 'kicked' | 'closed' | 'disconnect';
+  }) => void;
   [SocketEvents.ROOM_UPDATE]: (payload: { room: RoomInfo }) => void;
   [SocketEvents.ROOM_ERROR]: (payload: SocketErrorPayload) => void;
   [SocketEvents.GAME_STATE]: (payload: { state: PublicGameState }) => void;

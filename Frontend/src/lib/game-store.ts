@@ -10,6 +10,7 @@ interface GameStore {
   chat: ChatMessage[];
   selectedCardIds: string[];
   playError: string | null;
+  roomExitReason: 'left' | 'kicked' | 'closed' | 'disconnect' | null;
   /** Full game snapshot before optimistic play (for rollback). */
   gameBackup: PrivateGameState | null;
   pendingPlayIds: string[];
@@ -23,6 +24,8 @@ interface GameStore {
   setPlayError: (message: string | null) => void;
   applyOptimisticPlay: (userId: string, cards: Card[]) => void;
   rollbackOptimisticPlay: () => void;
+  forceRoomExit: (reason: 'left' | 'kicked' | 'closed' | 'disconnect') => void;
+  clearRoomExit: () => void;
   reset: () => void;
 }
 
@@ -51,6 +54,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   chat: [],
   selectedCardIds: [],
   playError: null,
+  roomExitReason: null,
   gameBackup: null,
   pendingPlayIds: [],
   setRoom: (room) => set({ room }),
@@ -128,6 +132,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pendingPlayIds: [],
     });
   },
+  forceRoomExit: (reason) =>
+    set({
+      room: null,
+      qrDataUrl: null,
+      game: null,
+      chat: [],
+      selectedCardIds: [],
+      playError: null,
+      gameBackup: null,
+      pendingPlayIds: [],
+      roomExitReason: reason,
+    }),
+  clearRoomExit: () => set({ roomExitReason: null }),
   reset: () =>
     set({
       room: null,
@@ -138,5 +155,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playError: null,
       gameBackup: null,
       pendingPlayIds: [],
+      roomExitReason: null,
     }),
 }));

@@ -29,11 +29,13 @@ export default function RoomPage() {
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
 
-  const { joinRoom, reconnect, requestGameState, checkTimeout, setReady, startGame, kick, transferHost, closeRoom, playCards, pass, playAgain, sendChat } =
+  const { joinRoom, reconnect, requestGameState, checkTimeout, setReady, startGame, kick, transferHost, closeRoom, leaveRoom, playCards, pass, playAgain, sendChat } =
     useGameSocket();
 
   const setRoom = useGameStore((s) => s.setRoom);
   const setGame = useGameStore((s) => s.setGame);
+  const roomExitReason = useGameStore((s) => s.roomExitReason);
+  const clearRoomExit = useGameStore((s) => s.clearRoomExit);
   const syncedRef = useRef<string | null>(null);
   const recoveryAttemptedRef = useRef(false);
 
@@ -53,6 +55,30 @@ export default function RoomPage() {
       setStarting(false);
     }
   }, [room?.status, game]);
+
+  useEffect(() => {
+    if (!roomExitReason) {
+      return;
+    }
+    clearRoomExit();
+    router.replace('/');
+  }, [roomExitReason, clearRoomExit, router]);
+
+  // Close tab / leave page → auto leave room (host or member)
+  useEffect(() => {
+    if (!joined || !room) {
+      return;
+    }
+    const onLeavePage = () => {
+      leaveRoom();
+    };
+    window.addEventListener('pagehide', onLeavePage);
+    window.addEventListener('beforeunload', onLeavePage);
+    return () => {
+      window.removeEventListener('pagehide', onLeavePage);
+      window.removeEventListener('beforeunload', onLeavePage);
+    };
+  }, [joined, room, leaveRoom]);
 
   // Only reset when navigating to a different room code — never on every room socket update
   useEffect(() => {
@@ -415,6 +441,11 @@ export default function RoomPage() {
           {isHost && (
             <button type="button" className="btn-secondary col-span-2 !min-h-[44px] text-sm sm:col-span-1" onClick={() => closeRoom()}>
               {dict.closeRoom}
+            </button>
+          )}
+          {!isHost && (
+            <button type="button" className="btn-secondary col-span-2 !min-h-[44px] text-sm sm:col-span-1" onClick={() => leaveRoom()}>
+              {dict.leaveRoom}
             </button>
           )}
         </div>
