@@ -119,9 +119,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const playError = useGameStore((s) => s.playError);
   const nextGameAt = useGameStore((s) => s.nextGameAt);
-  const chopTransfers = useGameStore((s) => s.chopTransfers);
   const setPlayError = useGameStore((s) => s.setPlayError);
-  const setChopTransfers = useGameStore((s) => s.setChopTransfers);
   const toggleCard = useGameStore((s) => s.toggleCard);
   const locale = useSettingsStore((s) => s.locale);
   const dict = t(locale);
@@ -216,35 +214,6 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
     return () => window.clearTimeout(id);
   }, [finished, game.roundNumber]);
 
-  useEffect(() => {
-    if (!chopTransfers?.length) {
-      return;
-    }
-    const id = window.setTimeout(() => setChopTransfers(null), 4000);
-    return () => window.clearTimeout(id);
-  }, [chopTransfers, setChopTransfers]);
-
-  const chopBanner = useMemo(() => {
-    if (!chopTransfers?.length) {
-      return null;
-    }
-    // Prefer overchop / first chop line (ignore refund) so toast matches final stake
-    const focus =
-      chopTransfers.find((t) => t.kind === 'overchop') ??
-      chopTransfers.find((t) => t.kind === 'chop') ??
-      chopTransfers[0]!;
-    const pts = focus.points;
-    const attacker =
-      room.players.find((p) => p.userId === focus.attackerId)?.nickname ??
-      focus.attackerId.slice(0, 6);
-    const victim =
-      room.players.find((p) => p.userId === focus.victimId)?.nickname ??
-      focus.victimId.slice(0, 6);
-    return dict.chopToast
-      .replace('{attacker}', attacker)
-      .replace('{victim}', victim)
-      .replaceAll('{pts}', String(pts));
-  }, [chopTransfers, dict.chopToast, room.players]);
   // Hand already optimistic-trimmed; also hide any still-flying ids
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
@@ -272,12 +241,6 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
       {playError && (
         <div className="absolute inset-x-3 top-14 z-[55] mx-auto max-w-md rounded-xl border border-rose-400/50 bg-rose-950/90 px-3 py-2 text-center text-[12px] leading-snug text-rose-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
           {playError}
-        </div>
-      )}
-
-      {chopBanner && (
-        <div className="absolute inset-x-3 top-14 z-[56] mx-auto max-w-md rounded-xl border border-amber-400/50 bg-amber-950/90 px-3 py-2 text-center text-[12px] font-semibold leading-snug text-amber-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
-          {chopBanner}
         </div>
       )}
 

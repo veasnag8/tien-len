@@ -414,11 +414,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.requestId,
       );
       this.broadcastGame(data.roomId, snap);
-      if (snap.chopTransfers.length > 0) {
-        this.server.to(data.roomId).emit(SocketEvents.GAME_CHOP, {
-          transfers: snap.chopTransfers,
-        });
-      }
       this.scheduleTurnTimer(data.roomId, snap.publicState.turnDeadline);
       if (snap.publicState.phase === 'finished') {
         this.emitFinishedAndScheduleNext(data.roomId, snap);

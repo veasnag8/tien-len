@@ -96,9 +96,7 @@ const dictionaries = {
     rule6: '2–4 players — everyone always gets 13 cards. After the game starts, new players cannot join.',
     rule7: '3♠ opens only the first game. After that, the previous winner leads.',
     rule8: 'Four 2s (all four cards of rank 2) = ផ្ទុះ — instant win when dealt.',
-    ruleCarre:
-      'ការ៉េ (e.g. 5555) beats a 2: red +3/−3, black +2/−2. If a bigger ការ៉េ (6666) overchops, the 2-player is cleared; the previous ការ៉េ pays double (−6 / +6). Each further overchop ×2 again.',
-    chopToast: 'ការ៉េ! {attacker} +{pts} · {victim} −{pts}',
+    ruleCarre: 'ការ៉េ (four of a kind, e.g. 5555) can beat a single 2 or a pair of 2s. Higher ការ៉េ beats lower ការ៉េ. No mid-round points for chops.',
     explodeWin: 'ផ្ទុះ! Four 2s — instant win',
     playErrorEmpty: 'Select cards first.',
     playErrorInvalid: 'Invalid combination.',
@@ -115,7 +113,7 @@ const dictionaries = {
     ruleSuit:
       'Suits: ♥♦ red, ♣♠ black. Same rank: A♥ > A♦ > A♣ > A♠.',
     rulePoints:
-      'Points (start at 0, can go negative): 2p +3/−3 · 3p +3/−1/−2 · 4p +3/+2/−2/−3.',
+      'Points start at 0. Scored only when the round ends (not by cards): 1st +3. 2 players: loser −3. 3p: +3/−1/−2. 4p: +3/+2/−2/−3. Totals may go below 0.',
   },
   km: {
     brand: 'ទៀនលើន',
@@ -212,9 +210,7 @@ const dictionaries = {
     rule6: '២–៤ នាក់ — ម្នាក់ៗតែងតែបាន ១៣ សន្លឹក។ ពេលចាប់ផ្តើមហើយ មិនអាចចូលបន្ថែម។',
     rule7: '៣♠ ដឹកមុនតែវគ្គដំបូង។ វគ្គបន្ទាប់ អ្នកឈ្នះមុនដឹក។',
     rule8: 'មានសន្លឹក២ ទាំង៤ សន្លឹក = ផ្ទុះ — ឈ្នះភ្លាម។',
-    ruleCarre:
-      'ការ៉េ (ឧ. ៥៥៥៥) វាយ២៖ ក្រហម +៣/−៣ · ខ្មៅ +២/−២។ បើមានការ៉េធំជាង (៦៦៦៦) វាយបន្ត — អ្នកលេង២មិនកាត់ទៀត · អ្នក៥៥៥៥ −៦ អ្នក៦៦៦៦ +៦។ វាយបន្តទៀតគុណ×២។',
-    chopToast: 'ការ៉េ! {attacker} +{pts} · {victim} −{pts}',
+    ruleCarre: 'ការ៉េ (សន្លឹកដូចគ្នា៤ ឧ. ៥៥៥៥) អាចវាយ២ ឬគូ២។ ការ៉េធំជាងវាយការ៉េតូចជាងបាន។ គ្មានពិន្ទុកណ្តាលវគ្គពីការវាយ។',
     explodeWin: 'ផ្ទុះ! សន្លឹក២ ទាំង៤ — ឈ្នះភ្លាម',
     playErrorEmpty: 'សូមជ្រើសកាតសិន។',
     playErrorInvalid: 'សំណុំកាតមិនត្រឹមត្រូវ។',
@@ -230,7 +226,7 @@ const dictionaries = {
     playErrorFivePairsOff: 'បន្ទប់នេះបិទគូរៀង ៥។',
     ruleSuit: 'ពណ៌៖ ♥♦ ក្រហម · ♣♠ ខ្មៅ។ លេខដូចគ្នា៖ A♥ > A♦ > A♣ > A♠។',
     rulePoints:
-      'ពិន្ទុ (ចាប់ផ្តើម ០ អាចដល់ក្រោម ០)៖ ២នាក់ +៣/−៣ · ៣នាក់ +៣/−១/−២ · ៤នាក់ +៣/+២/−២/−៣។',
+      'ពិន្ទុចាប់ផ្តើម ០។ បូកតែពេលចប់វគ្គ (មិនគិតសន្លឹក)៖ ទី១ +៣។ ២នាក់៖ អ្នកចាញ់ −៣។ ៣នាក់ +៣/−១/−២។ ៤នាក់ +៣/+២/−២/−៣។ អាចដល់ក្រោម ០។',
   },
 } as const;
 
