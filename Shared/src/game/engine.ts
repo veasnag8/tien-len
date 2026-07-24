@@ -22,6 +22,8 @@ export interface PlayerGameState {
   hasFinished: boolean;
   placement: number | null;
   isConnected: boolean;
+  /** Remaining cards — only set when the round has finished (show losers' hands). */
+  revealedHand?: Card[];
 }
 
 export type WinReason = 'empty_hand' | 'four_twos';
@@ -33,6 +35,8 @@ export interface PublicGameState {
   players: PlayerGameState[];
   currentTurnSeat: number;
   currentCombination: Combination | null;
+  /** Combination that was just beaten (shown dimmed behind the latest play). */
+  previousCombination: Combination | null;
   lastPlaySeat: number | null;
   passedSeats: number[];
   pile: Card[];
@@ -64,6 +68,7 @@ export interface InternalGameState {
   players: InternalPlayerState[];
   currentTurnSeat: number;
   currentCombination: Combination | null;
+  previousCombination: Combination | null;
   lastPlaySeat: number | null;
   passedSeats: Set<number>;
   pile: Card[];
@@ -126,6 +131,7 @@ export function createGame(
     players,
     currentTurnSeat: firstSeat,
     currentCombination: null,
+    previousCombination: null,
     lastPlaySeat: null,
     passedSeats: new Set(),
     pile: [],
@@ -194,6 +200,7 @@ function turnMs(state: InternalGameState): number {
 
 function resetTrick(state: InternalGameState, starterSeat: number): void {
   state.currentCombination = null;
+  state.previousCombination = null;
   state.passedSeats = new Set();
   state.pile = [];
   state.currentTurnSeat = starterSeat;
@@ -357,6 +364,7 @@ export function playCards(
 
   player.hand = removeCardsFromHand(player.hand, cards);
   state.pile = [...state.pile, ...cards];
+  state.previousCombination = state.currentCombination;
   state.currentCombination = combination;
   state.lastPlaySeat = player.seatIndex;
   state.passedSeats = new Set();
@@ -432,6 +440,7 @@ export function autoPassOnTimeout(state: InternalGameState): MoveResult {
 }
 
 export function toPublicState(state: InternalGameState): PublicGameState {
+  const finished = state.phase === 'finished';
   return {
     roomId: state.roomId,
     phase: state.phase,
@@ -443,9 +452,12 @@ export function toPublicState(state: InternalGameState): PublicGameState {
       hasFinished: p.hasFinished,
       placement: p.placement,
       isConnected: p.isConnected,
+      // Reveal leftover cards for everyone when the round ends (especially last place)
+      ...(finished && p.hand.length > 0 ? { revealedHand: sortCards(p.hand) } : {}),
     })),
     currentTurnSeat: state.currentTurnSeat,
     currentCombination: state.currentCombination,
+    previousCombination: state.previousCombination,
     lastPlaySeat: state.lastPlaySeat,
     passedSeats: [...state.passedSeats],
     pile: state.pile,

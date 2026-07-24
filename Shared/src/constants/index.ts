@@ -7,7 +7,9 @@ export const GAME_CONSTANTS = {
   /** Client 3-2-1 overlay before play; added to first turn deadline. */
   START_COUNTDOWN_MS: 3_000,
   /** After a round ends, wait this long then deal the next game automatically. */
-  AUTO_NEXT_GAME_MS: 3_000,
+  AUTO_NEXT_GAME_MS: 4_500,
+  /** Show last winning play briefly before rankings overlay. */
+  WIN_REVEAL_MS: 1_500,
   /** ការ៉េ chops a red 2 (♥♦): attacker +N, victim −N. */
   CHOP_RED_TWO_POINTS: 3,
   /** ការ៉េ chops a black 2 (♣♠): attacker +N, victim −N. */

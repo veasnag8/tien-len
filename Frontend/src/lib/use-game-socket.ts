@@ -132,7 +132,7 @@ function attachSocketListeners(socket: Socket): void {
     if (payload.nextGameAt) {
       useGameStore.getState().setNextGameAt(payload.nextGameAt);
     } else {
-      useGameStore.getState().setNextGameAt(Date.now() + 3_000);
+      useGameStore.getState().setNextGameAt(Date.now() + 4_500);
     }
   });
   socket.on(SocketEvents.GAME_CHOP, (payload: {

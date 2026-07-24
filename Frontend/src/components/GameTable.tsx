@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
-import { pointsForPlacement } from '@tien-len/shared';
+import { GAME_CONSTANTS, pointsForPlacement } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
 import { ConfettiBurst } from './ConfettiBurst';
 import { GameHelpButton } from './GameHelpButton';
@@ -46,14 +46,21 @@ function OpponentFan({
   handCount,
   isTurn,
   slot,
+  revealedHand,
 }: {
   name: string;
   handCount: number;
   isTurn: boolean;
   slot: SeatSlot;
+  revealedHand?: Card[];
 }) {
-  const shown = Math.min(handCount, slot === 'top' ? 10 : 8);
+  const faceUp = Boolean(revealedHand && revealedHand.length > 0);
+  const cards = faceUp ? revealedHand! : null;
+  const shown = faceUp
+    ? Math.min(cards!.length, slot === 'top' ? 13 : 10)
+    : Math.min(handCount, slot === 'top' ? 10 : 8);
   const vertical = slot === 'left' || slot === 'right';
+  const step = faceUp ? (vertical ? 11 : 14) : vertical ? 9 : 11;
 
   return (
     <div
@@ -66,32 +73,45 @@ function OpponentFan({
         <p className="text-[10px] tabular-nums text-emerald-200/90">{handCount}</p>
       </div>
       <div
-        className={`relative flex ${vertical ? 'h-[7.5rem] w-12 flex-col items-center' : 'h-14 items-end'}`}
+        className={`relative flex ${
+          vertical
+            ? `w-12 flex-col items-center ${faceUp ? 'h-[9.5rem]' : 'h-[7.5rem]'}`
+            : `items-end ${faceUp ? 'h-16' : 'h-14'}`
+        }`}
+        style={!vertical ? { width: `${Math.max(shown * step + 40, 48)}px` } : undefined}
       >
         {Array.from({ length: shown }).map((_, i) => (
           <div
-            key={i}
+            key={faceUp ? cards![i]!.id : i}
             className="absolute"
             style={
               vertical
                 ? {
-                    top: `${i * 9}px`,
+                    top: `${i * step}px`,
                     transform: `rotate(${slot === 'left' ? -8 : 8}deg)`,
                     zIndex: i,
                   }
                 : {
-                    left: `${i * 11}px`,
+                    left: `${i * step}px`,
                     transform: `rotate(${(i - shown / 2) * 2.2}deg)`,
                     zIndex: i,
                   }
             }
           >
-            <CardBack mini />
+            {faceUp ? <PlayingCard card={cards![i]!} mini disabled /> : <CardBack mini />}
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+/** Latest play in front; previous beaten play dimmed behind. */
+function pileLayers(previous: Card[] | undefined, latest: Card[] | undefined, flyingIds: Set<string>) {
+  return {
+    previous: (previous ?? []).filter((c) => !flyingIds.has(c.id)),
+    latest: (latest ?? []).filter((c) => !flyingIds.has(c.id)),
+  };
 }
 
 export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTableProps) {
@@ -175,15 +195,26 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
   }, [secondsLeft, game.phase, game.turnDeadline, onTimeoutCheck, showStartCountdown]);
 
   const finished = game.phase === 'finished' && !showStartCountdown;
+  const [showWinOverlay, setShowWinOverlay] = useState(false);
   const nextGameSecondsLeft = useCountdown(finished ? nextGameAt : null);
-  const iWon = finished && game.rankings[0] === user?.id;
+  const iWon = finished && showWinOverlay && game.rankings[0] === user?.id;
 
   // Fallback if GAME_FINISHED event was missed
   useEffect(() => {
     if (finished && nextGameAt == null) {
-      useGameStore.getState().setNextGameAt(Date.now() + 3_000);
+      useGameStore.getState().setNextGameAt(Date.now() + GAME_CONSTANTS.AUTO_NEXT_GAME_MS);
     }
   }, [finished, nextGameAt]);
+
+  // Show last winning play first, then rankings overlay
+  useEffect(() => {
+    if (!finished) {
+      setShowWinOverlay(false);
+      return;
+    }
+    const id = window.setTimeout(() => setShowWinOverlay(true), GAME_CONSTANTS.WIN_REVEAL_MS);
+    return () => window.clearTimeout(id);
+  }, [finished, game.roundNumber]);
 
   useEffect(() => {
     if (!chopTransfers?.length) {
@@ -227,11 +258,16 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
     if (slot) seats[slot] = p;
   }
 
-  const recentPile = game.pile.slice(-8).filter((c) => !flyingIds.has(c.id));
+  const { previous: previousPile, latest: latestPile } = useMemo(() => {
+    const latest = game.currentCombination?.cards ?? game.pile.slice(-4);
+    const previous = game.previousCombination?.cards;
+    return pileLayers(previous, latest, flyingIds);
+  }, [flyingIds, game.currentCombination?.cards, game.pile, game.previousCombination?.cards]);
+
   return (
     <div className="game-table relative h-[100dvh] w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#0d6b5c_0%,#064e45_45%,#03352f_100%)] md:h-[min(100dvh,820px)] md:rounded-3xl md:border md:border-[var(--border)]">
       <StartCountdown active={showStartCountdown} goLabel={dict.go} onFinished={onIntroFinished} />
-      <ConfettiBurst active={Boolean(finished && iWon)} />
+      <ConfettiBurst active={Boolean(showWinOverlay && iWon)} />
 
       {playError && (
         <div className="absolute inset-x-3 top-14 z-[55] mx-auto max-w-md rounded-xl border border-rose-400/50 bg-rose-950/90 px-3 py-2 text-center text-[12px] leading-snug text-rose-50 shadow-lg backdrop-blur sm:top-16 sm:text-sm">
@@ -329,6 +365,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
             handCount={seats.top.handCount}
             isTurn={seats.top.seatIndex === game.currentTurnSeat && livePlay}
             slot="top"
+            revealedHand={seats.top.revealedHand}
           />
         </div>
       )}
@@ -341,6 +378,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
             handCount={seats.left.handCount}
             isTurn={seats.left.seatIndex === game.currentTurnSeat && livePlay}
             slot="left"
+            revealedHand={seats.left.revealedHand}
           />
         </div>
       )}
@@ -353,6 +391,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
             handCount={seats.right.handCount}
             isTurn={seats.right.seatIndex === game.currentTurnSeat && livePlay}
             slot="right"
+            revealedHand={seats.right.revealedHand}
           />
         </div>
       )}
@@ -374,20 +413,37 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
           )}
 
           <div className="relative flex min-h-[5.5rem] min-w-[8rem] flex-col items-center justify-center sm:min-h-[6.5rem]">
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              <AnimatePresence mode="popLayout">
-                {recentPile.map((card) => (
-                  <motion.div
-                    key={`${card.id}-${game.pile.indexOf(card)}`}
-                    initial={{ y: 48, opacity: 0.85, scale: 0.88 }}
-                    animate={{ y: 0, opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.92, y: -8 }}
-                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <PlayingCard card={card} disabled mini />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+            <div className="relative flex min-h-[4.5rem] min-w-[6rem] items-center justify-center">
+              {/* Older play — behind + dimmed */}
+              {previousPile.length > 0 && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-center gap-0.5 opacity-[0.38] blur-[0.4px]"
+                  style={{ transform: 'translateY(-10px) scale(0.9)' }}
+                  aria-hidden
+                >
+                  {previousPile.map((card) => (
+                    <div key={`old-${card.id}`} className="relative" style={{ marginLeft: -4 }}>
+                      <PlayingCard card={card} disabled mini />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Latest play — front & clear */}
+              <div className="relative z-10 flex flex-wrap items-center justify-center gap-1">
+                <AnimatePresence mode="popLayout">
+                  {latestPile.map((card) => (
+                    <motion.div
+                      key={`new-${card.id}`}
+                      initial={{ y: 48, opacity: 0.85, scale: 0.88 }}
+                      animate={{ y: 0, opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <PlayingCard card={card} disabled mini />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
             {game.pile.length === 0 && game.phase === 'playing' && (
               <p className="text-center text-[11px] text-emerald-100/70">{dict.freePlay}</p>
@@ -449,7 +505,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
         </div>
       </div>
 
-      {finished && (
+      {showWinOverlay && (
         <div className="absolute inset-x-4 bottom-24 z-30 mx-auto max-w-sm rounded-2xl border border-white/20 bg-black/75 p-4 backdrop-blur-md sm:bottom-28">
           {game.winReason === 'four_twos' && (
             <p className="mb-2 text-center text-sm font-semibold text-amber-200">{dict.explodeWin}</p>
