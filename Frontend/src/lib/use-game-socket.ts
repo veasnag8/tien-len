@@ -135,6 +135,29 @@ function attachSocketListeners(socket: Socket): void {
       useGameStore.getState().setNextGameAt(Date.now() + 4_500);
     }
   });
+  socket.on(SocketEvents.GAME_CHOP, (payload: {
+    transfers: import('@tien-len/shared').ChopTransfer[];
+  }) => {
+    if (!payload.transfers?.length) {
+      return;
+    }
+    useGameStore.getState().setChopTransfers(payload.transfers);
+    const me = useAuthStore.getState().user;
+    if (me) {
+      let delta = 0;
+      for (const t of payload.transfers) {
+        if (t.attackerId === me.id) {
+          delta += t.points;
+        }
+        if (t.victimId === me.id) {
+          delta -= t.points;
+        }
+      }
+      if (delta !== 0) {
+        useAuthStore.getState().setUser({ ...me, points: me.points + delta });
+      }
+    }
+  });
   socket.on(SocketEvents.GAME_TIMEOUT, () => {
     sounds.play('countdown', useSettingsStore.getState().soundEnabled);
   });

@@ -7,6 +7,9 @@ import {
   cardsBelongToHand,
   identifyCombination,
   removeCardsFromHand,
+  resolveCarréChop,
+  type CarréChopChain,
+  type ChopTransfer,
 } from './combinations';
 import { GAME_CONSTANTS } from '../constants';
 
@@ -76,6 +79,8 @@ export interface InternalGameState {
   roundNumber: number;
   finishedCount: number;
   winReason: WinReason | null;
+  /** Active ការ៉េ-on-2 instant point chain for the current trick. */
+  carréChopChain: CarréChopChain | null;
 }
 
 /** ផ្ទុះ — all four rank-2 cards in one hand → instant win. */
@@ -84,7 +89,7 @@ export function hasFourTwos(hand: Card[]): boolean {
 }
 
 export type MoveResult =
-  | { ok: true; state: InternalGameState; autoPassed?: boolean }
+  | { ok: true; state: InternalGameState; chopTransfers?: ChopTransfer[]; autoPassed?: boolean }
   | { ok: false; error: string; autoPassed?: boolean };
 
 export function createGame(
@@ -137,6 +142,7 @@ export function createGame(
     roundNumber: Math.max(1, Math.floor(roundNumber)),
     finishedCount: 0,
     winReason: null,
+    carréChopChain: null,
   };
 
   applyFourTwosInstantWin(state);
@@ -200,6 +206,7 @@ function resetTrick(state: InternalGameState, starterSeat: number): void {
   state.currentTurnSeat = starterSeat;
   state.lastPlaySeat = null;
   state.turnDeadline = Date.now() + turnMs(state);
+  state.carréChopChain = null;
 }
 
 function markFinished(state: InternalGameState, seat: number): void {
@@ -344,6 +351,17 @@ export function playCards(
     }
   }
 
+  const victimId =
+    state.lastPlaySeat != null ? (state.players[state.lastPlaySeat]?.userId ?? null) : null;
+  const { transfers: chopTransfers, chain: nextChain } = resolveCarréChop(
+    combination,
+    state.currentCombination,
+    userId,
+    victimId,
+    state.carréChopChain,
+  );
+  state.carréChopChain = nextChain;
+
   player.hand = removeCardsFromHand(player.hand, cards);
   state.pile = [...state.pile, ...cards];
   state.previousCombination = state.currentCombination;
@@ -354,13 +372,13 @@ export function playCards(
   if (player.hand.length === 0) {
     markFinished(state, player.seatIndex);
     if (state.rankings.length >= state.playerCount) {
-      return { ok: true, state };
+      return { ok: true, state, chopTransfers };
     }
   }
 
   state.currentTurnSeat = nextActiveSeat(state, player.seatIndex);
   state.turnDeadline = Date.now() + turnMs(state);
-  return { ok: true, state };
+  return { ok: true, state, chopTransfers };
 }
 
 export function passTurn(state: InternalGameState, userId: string): MoveResult {

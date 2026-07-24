@@ -1,4 +1,5 @@
-import { Card, Rank, compareCards, sortCards } from '../cards/types';
+import { Card, Rank, compareCards, isRedSuit, sortCards } from '../cards/types';
+import { GAME_CONSTANTS } from '../constants';
 
 export enum CombinationType {
   Single = 'SINGLE',
@@ -16,6 +17,110 @@ export interface Combination {
   cards: Card[];
   highestCard: Card;
   length: number;
+}
+
+/** Instant points when ការ៉េ chops a 2 / overchops another ការ៉េ. */
+export interface ChopTransfer {
+  attackerId: string;
+  victimId: string;
+  /** Positive amount: attacker gains, victim loses. */
+  points: number;
+  choppedCard: Card;
+  kind?: 'chop' | 'refund' | 'overchop';
+}
+
+/** Active ការ៉េ-on-2 chain for the current trick (overchop doubles). */
+export interface CarréChopChain {
+  basePoints: number;
+  currentPoints: number;
+  holderId: string;
+  lastVictimId: string;
+  sourceCard: Card;
+}
+
+/** Points for chopping one 2 with ការ៉េ (red +3, black +2). */
+export function carréChopPointsForCard(card: Card): number {
+  return isRedSuit(card.suit)
+    ? GAME_CONSTANTS.CHOP_RED_TWO_POINTS
+    : GAME_CONSTANTS.CHOP_BLACK_TWO_POINTS;
+}
+
+/**
+ * Instant score when ការ៉េ chops a 2 (វាយស៊ីហាយ).
+ * Red 2 → +3/−3 · Black 2 → +2/−2. Overchop ×2 and clears prior victim.
+ */
+export function resolveCarréChop(
+  incoming: Combination,
+  current: Combination | null,
+  attackerId: string,
+  victimId: string | null,
+  chain: CarréChopChain | null,
+): { transfers: ChopTransfer[]; chain: CarréChopChain | null } {
+  if (!current || !victimId || victimId === attackerId) {
+    return { transfers: [], chain };
+  }
+  if (incoming.type !== CombinationType.FourOfAKind) {
+    return { transfers: [], chain: null };
+  }
+
+  if (chain && current.type === CombinationType.FourOfAKind) {
+    const doubled = chain.currentPoints * 2;
+    const transfers: ChopTransfer[] = [
+      {
+        attackerId: chain.lastVictimId,
+        victimId: chain.holderId,
+        points: chain.currentPoints,
+        choppedCard: chain.sourceCard,
+        kind: 'refund',
+      },
+      {
+        attackerId,
+        victimId: chain.holderId,
+        points: doubled,
+        choppedCard: chain.sourceCard,
+        kind: 'overchop',
+      },
+    ];
+    return {
+      transfers,
+      chain: {
+        basePoints: chain.basePoints,
+        currentPoints: doubled,
+        holderId: attackerId,
+        lastVictimId: chain.holderId,
+        sourceCard: chain.sourceCard,
+      },
+    };
+  }
+
+  const isSingleTwo =
+    current.type === CombinationType.Single && toRank(current.highestCard.rank) === Rank.Two;
+  const isPairTwos =
+    current.type === CombinationType.Pair && toRank(current.highestCard.rank) === Rank.Two;
+  if (!isSingleTwo && !isPairTwos) {
+    return { transfers: [], chain: null };
+  }
+
+  const basePoints = current.cards.reduce((sum, card) => sum + carréChopPointsForCard(card), 0);
+  const sourceCard = current.cards[0]!;
+  return {
+    transfers: [
+      {
+        attackerId,
+        victimId,
+        points: basePoints,
+        choppedCard: sourceCard,
+        kind: 'chop',
+      },
+    ],
+    chain: {
+      basePoints,
+      currentPoints: basePoints,
+      holderId: attackerId,
+      lastVictimId: victimId,
+      sourceCard,
+    },
+  };
 }
 
 /** Coerce rank in case JSON/socket sent strings ("10") instead of numbers. */
