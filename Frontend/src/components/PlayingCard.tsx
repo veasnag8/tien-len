@@ -14,9 +14,10 @@ interface PlayingCardProps {
 }
 
 const sizeClasses = {
-  default: 'h-28 w-20 text-base',
-  compact: 'h-20 w-14 text-sm',
-  mini: 'h-[4.5rem] w-[2.65rem] text-[11px] sm:h-20 sm:w-14 sm:text-sm',
+  default: 'playing-card playing-card-default h-28 w-20 text-base',
+  compact: 'playing-card playing-card-compact h-20 w-14 text-sm',
+  /** Base for phones; short-landscape CSS shrinks further — no sm: upsizing. */
+  mini: 'playing-card playing-card-mini h-[3.75rem] w-[2.25rem] text-[10px] min-[900px]:h-[4.5rem] min-[900px]:w-[2.65rem] min-[900px]:text-[11px]',
 };
 
 export function PlayingCard({
@@ -47,10 +48,10 @@ export function PlayingCard({
       aria-label={formatCard(card)}
     >
       <span className="pointer-events-none absolute inset-0 bg-card-shine opacity-60" />
-      <span className="absolute left-1.5 top-1 font-bold leading-none sm:left-2 sm:top-1.5">
+      <span className="absolute left-1 top-0.5 font-bold leading-none min-[900px]:left-1.5 min-[900px]:top-1">
         {formatCard(card)}
       </span>
-      <span className="absolute bottom-1 right-1.5 rotate-180 font-bold leading-none sm:bottom-1.5 sm:right-2">
+      <span className="absolute bottom-0.5 right-1 rotate-180 font-bold leading-none min-[900px]:bottom-1 min-[900px]:right-1.5">
         {formatCard(card)}
       </span>
     </motion.button>
@@ -67,8 +68,8 @@ export function CardBack({ compact, mini }: { compact?: boolean; mini?: boolean 
         size,
       )}
     >
-      <div className="m-[3px] flex h-[calc(100%-6px)] items-center justify-center rounded-lg border border-sky-300/25 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_45%),repeating-linear-gradient(135deg,rgba(255,255,255,0.08)_0_5px,transparent_5px_10px)]">
-        <span className="text-[10px] font-bold tracking-wider text-sky-100/80">TL</span>
+      <div className="m-[2px] flex h-[calc(100%-4px)] items-center justify-center rounded-lg border border-sky-300/25 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_45%),repeating-linear-gradient(135deg,rgba(255,255,255,0.08)_0_5px,transparent_5px_10px)]">
+        <span className="text-[9px] font-bold tracking-wider text-sky-100/80">TL</span>
       </div>
     </div>
   );

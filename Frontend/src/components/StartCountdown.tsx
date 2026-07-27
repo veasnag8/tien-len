@@ -52,7 +52,7 @@ export function StartCountdown({ active, goLabel, onFinished }: StartCountdownPr
           <AnimatePresence mode="wait">
             <motion.p
               key={tick}
-              className="font-display text-[clamp(4.5rem,22vw,8rem)] font-bold leading-none text-amber-300 drop-shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
+              className="font-display text-[clamp(2.5rem,min(22vw,18vh),8rem)] font-bold leading-none text-amber-300 drop-shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
               initial={{ scale: 0.45, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.25, opacity: 0 }}

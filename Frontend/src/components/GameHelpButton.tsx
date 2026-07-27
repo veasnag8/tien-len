@@ -15,7 +15,7 @@ export function GameHelpButton() {
     <>
       <button
         type="button"
-        className="absolute bottom-2 left-2 z-30 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/40 bg-black/55 text-base font-bold text-amber-200 shadow-lg backdrop-blur sm:bottom-3 sm:left-3"
+        className="game-table-help absolute z-30 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-black/55 text-sm font-bold text-amber-200 shadow-lg backdrop-blur min-[900px]:h-9 min-[900px]:w-9 min-[900px]:text-base"
         aria-label={dict.rulesTitle}
         onClick={() => setOpen(true)}
       >

@@ -57,7 +57,13 @@ export function LandscapeGate({ children }: { children: React.ReactNode }) {
       {children}
       {portrait && (
         <div
-          className="landscape-gate fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 bg-[var(--bg)] px-8 text-center"
+          className="landscape-gate fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[var(--bg)] px-6 text-center"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
+          }}
           role="dialog"
           aria-modal="true"
           aria-label={dict.rotateTitle}
