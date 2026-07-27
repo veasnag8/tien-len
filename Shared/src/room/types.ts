@@ -16,6 +16,8 @@ export interface RoomSettings {
   allowFiveConsecutivePairs: boolean;
   turnTimeoutMs: number;
   isPrivate: boolean;
+  /** Custom room code requested by the host (3–6 alphanumeric chars). */
+  customCode?: string;
 }
 
 export interface RoomInfo {

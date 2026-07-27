@@ -31,6 +31,12 @@ class CreateRoomDto {
   @IsInt()
   @IsIn([30_000])
   turnTimeoutMs?: number;
+
+  /** Optional custom room code (3–6 alphanumeric characters). */
+  @IsOptional()
+  @IsString()
+  @Length(3, 6)
+  customCode?: string;
 }
 
 class JoinRoomDto {

@@ -243,6 +243,7 @@ export function useGameSocket() {
       maxPlayers?: 2 | 3 | 4;
       allowFiveConsecutivePairs?: boolean;
       isPrivate?: boolean;
+      customCode?: string;
     }) => {
       const socket = getOrCreateSocket();
       if (!socket) {

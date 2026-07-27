@@ -46,13 +46,25 @@ export class RoomsService {
       throw new BadRequestException('maxPlayers must be 2, 3, or 4');
     }
 
-    let code = generateRoomCode(GAME_CONSTANTS.ROOM_CODE_LENGTH);
-    for (let i = 0; i < 5; i += 1) {
-      const exists = await this.prisma.room.findUnique({ where: { code } });
-      if (!exists) {
-        break;
+    let code: string;
+    if (settings.customCode) {
+      code = settings.customCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (code.length < 3 || code.length > 6) {
+        throw new BadRequestException('Custom room code must be 3–6 alphanumeric characters');
       }
+      const exists = await this.prisma.room.findUnique({ where: { code } });
+      if (exists) {
+        throw new BadRequestException(`Room code "${code}" is already taken`);
+      }
+    } else {
       code = generateRoomCode(GAME_CONSTANTS.ROOM_CODE_LENGTH);
+      for (let i = 0; i < 5; i += 1) {
+        const exists = await this.prisma.room.findUnique({ where: { code } });
+        if (!exists) {
+          break;
+        }
+        code = generateRoomCode(GAME_CONSTANTS.ROOM_CODE_LENGTH);
+      }
     }
 
     const room = await this.prisma.room.create({
