@@ -250,30 +250,34 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
   const handRowRef = useRef<HTMLDivElement>(null);
-  /** Negative margin so cards span full width left → right */
-  const [handOverlap, setHandOverlap] = useState(12);
+  /** marginLeft between cards: negative = overlap, positive = gap — spans full width */
+  const [handOffset, setHandOffset] = useState(-10);
 
   useLayoutEffect(() => {
     function layoutHand() {
       const row = handRowRef.current;
       if (!row || handCount < 2) {
-        setHandOverlap(0);
+        setHandOffset(0);
         return;
       }
       const cardEl = row.querySelector('.playing-card-mini') as HTMLElement | null;
-      const cardW = cardEl?.getBoundingClientRect().width ?? 36;
+      const cardW = cardEl?.getBoundingClientRect().width || 36;
       const avail = row.clientWidth;
-      // cardW + (n-1)*(cardW - overlap) = avail  →  overlap = cardW - (avail - cardW)/(n-1)
+      if (avail < 40 || cardW < 8) return;
+      // First card at left edge, last card's right edge at right edge of row
       const step = (avail - cardW) / (handCount - 1);
-      const next = Math.min(cardW - 8, Math.max(0, cardW - step));
-      setHandOverlap(next);
+      setHandOffset(step - cardW);
     }
     layoutHand();
+    const raf = window.requestAnimationFrame(() => layoutHand());
+    const t = window.setTimeout(layoutHand, 50);
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(layoutHand) : null;
     if (handRowRef.current) ro?.observe(handRowRef.current);
     window.addEventListener('resize', layoutHand);
     window.addEventListener('orientationchange', layoutHand);
     return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(t);
       ro?.disconnect();
       window.removeEventListener('resize', layoutHand);
       window.removeEventListener('orientationchange', layoutHand);
@@ -515,7 +519,7 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
                 layout
                 className="relative shrink-0"
                 style={{
-                  marginLeft: index === 0 ? 0 : -handOverlap,
+                  marginLeft: index === 0 ? 0 : handOffset,
                   zIndex: selected ? 60 : index,
                 }}
                 animate={{

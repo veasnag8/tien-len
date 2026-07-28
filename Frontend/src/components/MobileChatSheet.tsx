@@ -40,10 +40,10 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
 
   return (
     <>
-      {/* Quick Chat — left of scoreboard */}
+      {/* Quick Chat */}
       <button
         type="button"
-        className="mobile-chat-fab mobile-quick-fab fixed z-[45] flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/40 bg-black/55 text-sm shadow-lg backdrop-blur lg:hidden"
+        className="mobile-chat-fab mobile-quick-fab fixed z-[45] flex h-10 w-10 items-center justify-center rounded-full border border-amber-300/50 bg-black/70 text-base shadow-lg backdrop-blur lg:hidden"
         style={{
           top: 'max(0.35rem, env(safe-area-inset-top, 0px))',
           right: 'max(9.5rem, calc(env(safe-area-inset-right, 0px) + 8.75rem))',
@@ -54,13 +54,13 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
         ⚡
       </button>
 
-      {/* Full Chat */}
+      {/* Chat — clear bubble so it doesn’t look like a coin */}
       <button
         type="button"
-        className="mobile-chat-fab fixed z-[45] flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500 text-sm font-bold text-ink-900 shadow-glow lg:hidden"
+        className="mobile-chat-fab fixed z-[45] flex h-10 min-w-10 items-center justify-center gap-0.5 rounded-full border border-gold-400/60 bg-gold-500 px-2 text-[11px] font-bold text-ink-900 shadow-glow lg:hidden"
         style={{
           top: 'max(0.35rem, env(safe-area-inset-top, 0px))',
-          right: 'max(7rem, calc(env(safe-area-inset-right, 0px) + 6.25rem))',
+          right: 'max(6.75rem, calc(env(safe-area-inset-right, 0px) + 6rem))',
         }}
         onClick={() => setOpen(true)}
         aria-label={dict.chat}
