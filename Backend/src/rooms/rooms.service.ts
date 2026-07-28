@@ -52,26 +52,11 @@ export class RoomsService {
       if (code.length < 3 || code.length > 6) {
         throw new BadRequestException('Custom room code must be 3–6 alphanumeric characters');
       }
-      const existing = await this.prisma.room.findUnique({
-        where: { code },
-        include: { players: true },
-      });
+      const existing = await this.prisma.room.findUnique({ where: { code } });
       if (existing) {
-        const connectedOthers = existing.players.filter(
-          (p) => p.isConnected && p.userId !== hostId,
-        ).length;
-        const canReuse =
-          existing.status === RoomStatus.closed ||
-          existing.status === RoomStatus.finished ||
-          (existing.status === RoomStatus.waiting &&
-            (existing.hostId === hostId || connectedOthers === 0));
-
-        if (canReuse && existing.status !== RoomStatus.playing) {
-          await this.prisma.room.delete({ where: { id: existing.id } });
-          await this.redis.del(`room:${existing.id}`).catch(() => undefined);
-        } else {
-          throw new BadRequestException(`Room code "${code}" is already taken`);
-        }
+        // Custom short codes are claimed by whoever creates next — replace any old room.
+        await this.prisma.room.delete({ where: { id: existing.id } });
+        await this.redis.del(`room:${existing.id}`).catch(() => undefined);
       }
     } else {
       code = generateRoomCode(GAME_CONSTANTS.ROOM_CODE_LENGTH);
