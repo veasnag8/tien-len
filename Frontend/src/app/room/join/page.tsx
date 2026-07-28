@@ -88,7 +88,7 @@ export default function JoinRoomPage() {
           placeholder={dict.roomCode}
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          maxLength={8}
+          maxLength={6}
           required
         />
         <input

@@ -37,11 +37,17 @@ class CreateRoomDto {
   @IsString()
   @Length(3, 6)
   customCode?: string;
+
+  /** Alias for customCode (same rules). */
+  @IsOptional()
+  @IsString()
+  @Length(3, 6)
+  code?: string;
 }
 
 class JoinRoomDto {
   @IsString()
-  @Length(4, 8)
+  @Length(3, 6)
   code!: string;
 }
 
@@ -52,7 +58,10 @@ export class RoomsController {
 
   @Post()
   create(@CurrentUser() user: User, @Body() dto: CreateRoomDto) {
-    return this.rooms.createRoom(user.id, dto);
+    return this.rooms.createRoom(user.id, {
+      ...dto,
+      customCode: dto.customCode ?? dto.code,
+    });
   }
 
   @Post('join')

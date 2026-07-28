@@ -149,10 +149,12 @@ class ApiClient {
     isPrivate?: boolean;
     turnTimeoutMs?: number;
     customCode?: string;
+    code?: string;
   }) {
+    const customCode = body.customCode ?? body.code;
     return this.request<{ room: RoomInfo; qrDataUrl: string }>('/rooms', {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, customCode, code: customCode }),
     });
   }
 
