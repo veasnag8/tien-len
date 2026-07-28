@@ -14,6 +14,7 @@ import { GameTable } from '@/components/GameTable';
 import { LITE_MODE } from '@/lib/config';
 import { ensureGuestSession, getSavedPlayerName } from '@/lib/guest-session';
 import { explainPlayFailure } from '@/lib/play-errors';
+import { useWakeLock } from '@/lib/use-wake-lock';
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -49,6 +50,9 @@ export default function RoomPage() {
   const [error, setError] = useState('');
   const [syncTimedOut, setSyncTimedOut] = useState(false);
   const [starting, setStarting] = useState(false);
+
+  // Keep phone screen on while in the room (lobby + match)
+  useWakeLock(Boolean(joined || game || room?.status === 'playing'));
 
   useEffect(() => {
     if (room?.status === 'playing' || room?.status === 'finished' || game) {
