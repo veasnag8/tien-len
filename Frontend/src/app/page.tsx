@@ -9,6 +9,8 @@ import { ensureGuestSession, getSavedPlayerName } from '@/lib/guest-session';
 import { api } from '@/lib/api';
 import { t } from '@/lib/i18n';
 
+type Mode = 'home' | 'create' | 'join';
+
 export default function HomePage() {
   const router = useRouter();
   const locale = useSettingsStore((s) => s.locale);
@@ -19,7 +21,8 @@ export default function HomePage() {
 
   const [nickname, setNickname] = useState('');
   const [roomCode, setRoomCode] = useState('');
-  const [showJoin, setShowJoin] = useState(false);
+  const [mode, setMode] = useState<Mode>('home');
+  const [codeError, setCodeError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -27,10 +30,51 @@ export default function HomePage() {
     setNickname(getSavedPlayerName());
   }, []);
 
-  async function onCreate() {
+  function handleCodeChange(raw: string) {
+    const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    setRoomCode(cleaned);
+    if (cleaned.length > 0 && cleaned.length < 3) {
+      setCodeError(locale === 'km' ? 'យ៉ាងតិច ៣ តួ' : 'Minimum 3 characters');
+    } else {
+      setCodeError('');
+    }
+  }
+
+  function openCreate() {
+    setError('');
+    setCodeError('');
+    setRoomCode('');
+    setMode('create');
+  }
+
+  function openJoin() {
+    setError('');
+    setCodeError('');
+    setRoomCode('');
+    setMode('join');
+  }
+
+  function backHome() {
+    setError('');
+    setCodeError('');
+    setRoomCode('');
+    setMode('home');
+  }
+
+  async function onCreate(e: FormEvent) {
+    e.preventDefault();
     const name = nickname.trim();
+    const code = roomCode.trim().toUpperCase();
     if (name.length < 2) {
       setError(dict.nicknameRequired);
+      return;
+    }
+    if (!code) {
+      setError(dict.roomCodeRequired);
+      return;
+    }
+    if (code.length < 3) {
+      setCodeError(locale === 'km' ? 'យ៉ាងតិច ៣ តួ' : 'Minimum 3 characters');
       return;
     }
     setLoading(true);
@@ -42,6 +86,7 @@ export default function HomePage() {
         allowFiveConsecutivePairs: true,
         isPrivate: true,
         turnTimeoutMs: 30_000,
+        customCode: code,
       });
       setRoom(room);
       setQr(qrDataUrl);
@@ -98,36 +143,80 @@ export default function HomePage() {
             onChange={(e) => setNickname(e.target.value)}
             minLength={2}
             maxLength={24}
-            autoFocus
+            autoFocus={mode === 'home'}
             disabled={loading}
           />
         </div>
 
-        {!showJoin ? (
+        {mode === 'home' && (
           <div className="grid gap-3">
-            <button type="button" className="btn-primary w-full" disabled={loading} onClick={() => void onCreate()}>
-              {loading ? dict.waiting : dict.createRoom}
+            <button type="button" className="btn-primary w-full" disabled={loading} onClick={openCreate}>
+              {dict.createRoom}
             </button>
-            <button type="button" className="btn-secondary w-full" disabled={loading} onClick={() => setShowJoin(true)}>
+            <button type="button" className="btn-secondary w-full" disabled={loading} onClick={openJoin}>
               {dict.joinRoom}
             </button>
           </div>
-        ) : (
+        )}
+
+        {mode === 'create' && (
+          <form className="space-y-3" onSubmit={(e) => void onCreate(e)}>
+            <div>
+              <label className="mb-2 block text-sm text-[var(--muted)]">{dict.roomCode}</label>
+              <input
+                className="input-field font-mono uppercase tracking-widest"
+                placeholder={locale === 'km' ? 'ឧ. 123' : 'e.g. 123'}
+                value={roomCode}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                maxLength={6}
+                inputMode="text"
+                autoFocus
+                required
+                disabled={loading}
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="characters"
+              />
+              <p className={`mt-1.5 text-xs ${codeError ? 'text-rose-400' : 'text-[var(--muted)]'}`}>
+                {codeError || dict.roomCodeHint}
+              </p>
+            </div>
+            <button
+              type="submit"
+              className="btn-primary w-full"
+              disabled={loading || Boolean(codeError) || roomCode.length < 3}
+            >
+              {loading ? dict.waiting : dict.confirmCreate}
+            </button>
+            <button type="button" className="btn-ghost w-full" disabled={loading} onClick={backHome}>
+              ← {dict.createRoom}
+            </button>
+          </form>
+        )}
+
+        {mode === 'join' && (
           <form className="space-y-3" onSubmit={(e) => void onJoin(e)}>
-            <input
-              className="input-field uppercase tracking-widest"
-              placeholder={dict.roomCode}
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value)}
-              maxLength={8}
-              required
-              disabled={loading}
-            />
+            <div>
+              <label className="mb-2 block text-sm text-[var(--muted)]">{dict.roomCode}</label>
+              <input
+                className="input-field font-mono uppercase tracking-widest"
+                placeholder={dict.roomCode}
+                value={roomCode}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                maxLength={6}
+                required
+                autoFocus
+                disabled={loading}
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="characters"
+              />
+            </div>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? dict.waiting : dict.confirmJoin}
             </button>
-            <button type="button" className="btn-ghost w-full" disabled={loading} onClick={() => setShowJoin(false)}>
-              ← {dict.createRoom}
+            <button type="button" className="btn-ghost w-full" disabled={loading} onClick={backHome}>
+              ← {dict.joinRoom}
             </button>
           </form>
         )}

@@ -148,6 +148,7 @@ class ApiClient {
     allowFiveConsecutivePairs?: boolean;
     isPrivate?: boolean;
     turnTimeoutMs?: number;
+    customCode?: string;
   }) {
     return this.request<{ room: RoomInfo; qrDataUrl: string }>('/rooms', {
       method: 'POST',

@@ -61,7 +61,7 @@ export default function CreateRoomPage() {
   }
 
   function handleCreate() {
-    if (customCode && customCode.length < 3) {
+    if (!customCode || customCode.length < 3) {
       setCodeError(locale === 'km' ? 'យ៉ាងតិច ៣ តួ' : 'Minimum 3 characters');
       return;
     }
@@ -69,7 +69,7 @@ export default function CreateRoomPage() {
       maxPlayers,
       allowFiveConsecutivePairs: allowFive,
       isPrivate: false,
-      customCode: customCode || undefined,
+      customCode,
     });
   }
 
@@ -78,15 +78,15 @@ export default function CreateRoomPage() {
       <div className="panel p-5 sm:p-8">
         <h1 className="font-display mb-6 text-3xl text-gold-300 sm:text-4xl">{dict.createRoom}</h1>
 
-        {/* Room code */}
+        {/* Room code — required */}
         <label className="mb-1.5 block text-sm text-[var(--muted)]">
-          {locale === 'km' ? 'លេខបន្ទប់ (ស្រេចចិត្ត)' : 'Room code (optional)'}
+          {dict.roomCode}
         </label>
         <div className="mb-1 flex gap-2">
           <input
             type="text"
             inputMode="text"
-            placeholder={locale === 'km' ? 'ឧ. 123 ឬ ABC123' : 'e.g. 123 or ABC123'}
+            placeholder={locale === 'km' ? 'ឧ. 123' : 'e.g. 123'}
             value={customCode}
             onChange={(e) => handleCodeChange(e.target.value)}
             maxLength={6}
@@ -95,6 +95,7 @@ export default function CreateRoomPage() {
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="characters"
+            autoFocus
           />
           {customCode && (
             <button
@@ -107,9 +108,7 @@ export default function CreateRoomPage() {
           )}
         </div>
         <p className={`mb-5 text-xs ${codeError ? 'text-rose-400' : 'text-[var(--muted)]'}`}>
-          {codeError || (locale === 'km'
-            ? '៣–៦ តួអក្សរ ឬ លេខ។ ទុកទំនេរ = បង្កើតដោយស្វ័យប្រវត្តិ'
-            : '3–6 letters or digits. Leave empty to auto-generate.')}
+          {codeError || dict.roomCodeHint}
         </p>
 
         {/* Player count */}
@@ -143,7 +142,7 @@ export default function CreateRoomPage() {
           type="button"
           className="btn-primary w-full"
           onClick={handleCreate}
-          disabled={Boolean(codeError)}
+          disabled={Boolean(codeError) || customCode.length < 3}
         >
           {dict.createRoom}
         </button>
