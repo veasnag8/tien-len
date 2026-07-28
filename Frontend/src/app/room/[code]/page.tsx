@@ -400,7 +400,7 @@ export default function RoomPage() {
         <div className="hidden lg:block">
           <RoomChat messages={chat} onSend={sendChat} />
         </div>
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <MobileChatSheet messages={chat} onSend={sendChat} />
         </div>
       </div>
@@ -523,10 +523,9 @@ export default function RoomPage() {
         </div>
       </div>
 
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <RoomChat messages={chat} onSend={sendChat} />
       </div>
-      <MobileChatSheet messages={chat} onSend={sendChat} />
     </div>
   );
 }

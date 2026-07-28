@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { GAME_CONSTANTS, pointsForPlacement } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
@@ -249,7 +249,36 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
   // Hand already optimistic-trimmed; also hide any still-flying ids
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
-  const fanSpread = Math.min(18, Math.max(8, 220 / Math.max(handCount, 1)));
+  const handRowRef = useRef<HTMLDivElement>(null);
+  /** Negative margin so cards span full width left → right */
+  const [handOverlap, setHandOverlap] = useState(12);
+
+  useLayoutEffect(() => {
+    function layoutHand() {
+      const row = handRowRef.current;
+      if (!row || handCount < 2) {
+        setHandOverlap(0);
+        return;
+      }
+      const cardEl = row.querySelector('.playing-card-mini') as HTMLElement | null;
+      const cardW = cardEl?.getBoundingClientRect().width ?? 36;
+      const avail = row.clientWidth;
+      // cardW + (n-1)*(cardW - overlap) = avail  →  overlap = cardW - (avail - cardW)/(n-1)
+      const step = (avail - cardW) / (handCount - 1);
+      const next = Math.min(cardW - 8, Math.max(0, cardW - step));
+      setHandOverlap(next);
+    }
+    layoutHand();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(layoutHand) : null;
+    if (handRowRef.current) ro?.observe(handRowRef.current);
+    window.addEventListener('resize', layoutHand);
+    window.addEventListener('orientationchange', layoutHand);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', layoutHand);
+      window.removeEventListener('orientationchange', layoutHand);
+    };
+  }, [handCount]);
 
   const seats: Partial<Record<SeatSlot, (typeof game.players)[0]>> = {};
   for (const p of game.players) {
@@ -469,27 +498,30 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
         </div>
       </div>
 
-      {/* My hand — bottom */}
+      {/* My hand — full width left → right */}
       <div className="game-table-hand absolute inset-x-0 bottom-0 z-20 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1">
-        <div className="mx-auto flex max-w-full justify-center overflow-x-auto px-1 [scrollbar-width:none]">
+        <div
+          ref={handRowRef}
+          className="flex w-full items-end justify-start overflow-visible px-[max(0.2rem,env(safe-area-inset-left))] pr-[max(0.2rem,env(safe-area-inset-right))]"
+        >
           {visibleHand.map((card, index) => {
             const selected = selectedCardIds.includes(card.id);
             const center = (handCount - 1) / 2;
             const offset = index - center;
-            const rotate = offset * (handCount > 10 ? 1.8 : 2.5);
+            const rotate = offset * (handCount > 10 ? 0.9 : 1.4);
             return (
               <motion.div
                 key={card.id}
                 layout
                 className="relative shrink-0"
                 style={{
-                  marginLeft: index === 0 ? 0 : `-${fanSpread * 0.55}px`,
+                  marginLeft: index === 0 ? 0 : -handOverlap,
                   zIndex: selected ? 60 : index,
                 }}
                 animate={{
-                  y: selected ? -16 : 0,
+                  y: selected ? -14 : 0,
                   rotate,
-                  scale: selected ? 1.03 : 1,
+                  scale: selected ? 1.04 : 1,
                 }}
                 transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.6 }}
               >

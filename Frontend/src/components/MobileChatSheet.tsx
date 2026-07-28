@@ -13,6 +13,7 @@ interface MobileChatSheetProps {
   onSend: (content: string, isEmoji?: boolean) => void;
 }
 
+/** In-game only — use lg:hidden so landscape phones (often >768px wide) still see FABs. */
 export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
   const [open, setOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -39,33 +40,40 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
 
   return (
     <>
-      {/* Quick Chat FAB — lightning bolt */}
+      {/* Quick Chat — left of scoreboard */}
       <button
         type="button"
-        className="mobile-chat-fab mobile-quick-fab fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-[4.5rem] z-30 flex h-12 w-12 items-center justify-center rounded-full border border-gold-500/40 bg-[var(--panel)] text-lg shadow-lg backdrop-blur md:hidden"
+        className="mobile-chat-fab mobile-quick-fab fixed z-[45] flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/40 bg-black/55 text-sm shadow-lg backdrop-blur lg:hidden"
+        style={{
+          top: 'max(0.35rem, env(safe-area-inset-top, 0px))',
+          right: 'max(9.5rem, calc(env(safe-area-inset-right, 0px) + 8.75rem))',
+        }}
         onClick={() => setQuickOpen(true)}
         aria-label="Quick Chat"
       >
         ⚡
       </button>
 
-      {/* Full Chat FAB */}
+      {/* Full Chat */}
       <button
         type="button"
-        className="mobile-chat-fab fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500 text-base font-bold text-ink-900 shadow-glow md:hidden min-[900px]:h-14 min-[900px]:w-14 min-[900px]:text-lg"
+        className="mobile-chat-fab fixed z-[45] flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/40 bg-gold-500 text-sm font-bold text-ink-900 shadow-glow lg:hidden"
+        style={{
+          top: 'max(0.35rem, env(safe-area-inset-top, 0px))',
+          right: 'max(7rem, calc(env(safe-area-inset-right, 0px) + 6.25rem))',
+        }}
         onClick={() => setOpen(true)}
         aria-label={dict.chat}
       >
         💬
       </button>
 
-      {/* Quick Chat drawer */}
       <AnimatePresence>
         {quickOpen && (
           <>
             <motion.button
               type="button"
-              className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              className="fixed inset-0 z-50 bg-black/50 lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -73,7 +81,7 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
               aria-label="Close quick chat"
             />
             <motion.div
-              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl md:hidden"
+              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl lg:hidden"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -92,13 +100,12 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
         )}
       </AnimatePresence>
 
-      {/* Full Chat sheet */}
       <AnimatePresence>
         {open && (
           <>
             <motion.button
               type="button"
-              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              className="fixed inset-0 z-50 bg-black/60 lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -106,7 +113,7 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
               aria-label="Close chat"
             />
             <motion.div
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col rounded-t-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl md:hidden"
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col rounded-t-3xl border border-[var(--border)] bg-[var(--panel)] shadow-2xl lg:hidden"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -126,7 +133,6 @@ export function MobileChatSheet({ messages, onSend }: MobileChatSheetProps) {
                   ✕
                 </button>
               </div>
-              {/* Quick chat strip inside the full chat sheet */}
               <div className="border-b border-[var(--border)]">
                 <QuickChatBar onSend={(msg) => { onSend(msg); setOpen(false); }} />
               </div>

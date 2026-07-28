@@ -218,13 +218,18 @@ html[lang='en'] .font-display {
     min-width: 5.5rem;
   }
 
-  .game-table .game-table-hand {
-    transform: scale(0.92);
-    transform-origin: bottom center;
+  /* Chat FABs — left of scoreboard */
+  .mobile-chat-fab {
+    top: max(0.35rem, env(safe-area-inset-top, 0px)) !important;
+    right: max(7rem, calc(env(safe-area-inset-right, 0px) + 6.25rem)) !important;
+    bottom: auto !important;
+    height: 2.25rem !important;
+    width: 2.25rem !important;
+    font-size: 0.8rem !important;
   }
 
-  .mobile-chat-fab {
-    display: none !important;
+  .mobile-quick-fab {
+    right: max(9.5rem, calc(env(safe-area-inset-right, 0px) + 8.75rem)) !important;
   }
 }
 
@@ -254,7 +259,7 @@ html[lang='en'] .font-display {
 
   .mobile-chat-fab {
     top: max(0.5rem, env(safe-area-inset-top, 0px));
-    right: max(7.5rem, calc(env(safe-area-inset-right, 0px) + 0.5rem));
+    right: max(7.5rem, calc(env(safe-area-inset-right, 0px) + 6.5rem));
     bottom: auto !important;
     height: 2.5rem;
     width: 2.5rem;
@@ -263,7 +268,7 @@ html[lang='en'] .font-display {
 
   .mobile-quick-fab {
     top: max(0.5rem, env(safe-area-inset-top, 0px));
-    right: max(11rem, calc(env(safe-area-inset-right, 0px) + 3.5rem));
+    right: max(10.25rem, calc(env(safe-area-inset-right, 0px) + 9.25rem));
     bottom: auto !important;
     height: 2.5rem;
     width: 2.5rem;
