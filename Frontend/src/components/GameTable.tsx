@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Card, PrivateGameState, RoomInfo } from '@tien-len/shared';
 import { GAME_CONSTANTS, pointsForPlacement } from '@tien-len/shared';
 import { PlayingCard, CardBack } from './PlayingCard';
@@ -250,27 +250,47 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
   const visibleHand = game.hand.filter((c) => !flyingIds.has(c.id));
   const handCount = visibleHand.length;
   const handRowRef = useRef<HTMLDivElement>(null);
-  /** marginLeft between cards: negative = overlap, positive = gap — spans full width */
-  const [handOffset, setHandOffset] = useState(-10);
+  /** Large cards, tightly overlapped, centered */
+  const [handStyle, setHandStyle] = useState({
+    cardW: 48,
+    cardH: 72,
+    offset: -26,
+    fontSize: 11,
+  });
 
   useLayoutEffect(() => {
     function layoutHand() {
       const row = handRowRef.current;
-      if (!row || handCount < 2) {
-        setHandOffset(0);
-        return;
-      }
-      const cardEl = row.querySelector('.playing-card-mini') as HTMLElement | null;
-      const cardW = cardEl?.getBoundingClientRect().width || 36;
+      if (!row || handCount < 1) return;
+
       const avail = row.clientWidth;
-      if (avail < 40 || cardW < 8) return;
-      // First card at left edge, last card's right edge at right edge of row
-      const step = (avail - cardW) / (handCount - 1);
-      setHandOffset(step - cardW);
+      const maxH = Math.min(window.innerHeight * 0.28, 96);
+      // Prefer large cards; peek ~38% of each card (≈62% overlap) so they stay tight
+      const peek = 0.36;
+      // cardW from height first (readable), then shrink only if fan won't fit
+      let cardH = maxH;
+      let cardW = cardH * (2.25 / 3.75);
+      let step = cardW * peek;
+      let fanW = cardW + Math.max(0, handCount - 1) * step;
+      if (fanW > avail && handCount > 1) {
+        // Shrink just enough to fit — keep peek ratio (still tight, never gapped)
+        cardW = avail / (1 + (handCount - 1) * peek);
+        cardH = cardW * (3.75 / 2.25);
+        step = cardW * peek;
+      }
+      cardW = Math.max(34, cardW);
+      cardH = Math.max(50, cardH);
+      step = cardW * peek;
+      setHandStyle({
+        cardW,
+        cardH,
+        offset: step - cardW, // always negative → overlapping
+        fontSize: Math.max(9, Math.round(cardW * 0.28)),
+      });
     }
     layoutHand();
-    const raf = window.requestAnimationFrame(() => layoutHand());
-    const t = window.setTimeout(layoutHand, 50);
+    const raf = window.requestAnimationFrame(layoutHand);
+    const t = window.setTimeout(layoutHand, 60);
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(layoutHand) : null;
     if (handRowRef.current) ro?.observe(handRowRef.current);
     window.addEventListener('resize', layoutHand);
@@ -502,30 +522,37 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
         </div>
       </div>
 
-      {/* My hand — full width left → right */}
-      <div className="game-table-hand absolute inset-x-0 bottom-0 z-20 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1">
+      {/* My hand — large cards, tightly overlapped, centered */}
+      <div className="game-table-hand absolute inset-x-0 bottom-0 z-20 pb-[max(0.15rem,env(safe-area-inset-bottom))] pt-1">
         <div
           ref={handRowRef}
-          className="flex w-full items-end justify-start overflow-visible px-[max(0.2rem,env(safe-area-inset-left))] pr-[max(0.2rem,env(safe-area-inset-right))]"
+          className="flex w-full items-end justify-center overflow-visible px-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]"
+          style={
+            {
+              '--hand-card-w': `${handStyle.cardW}px`,
+              '--hand-card-h': `${handStyle.cardH}px`,
+              '--hand-card-fs': `${handStyle.fontSize}px`,
+            } as CSSProperties
+          }
         >
           {visibleHand.map((card, index) => {
             const selected = selectedCardIds.includes(card.id);
             const center = (handCount - 1) / 2;
             const offset = index - center;
-            const rotate = offset * (handCount > 10 ? 0.9 : 1.4);
+            const rotate = offset * (handCount > 10 ? 1.2 : 1.8);
             return (
               <motion.div
                 key={card.id}
                 layout
                 className="relative shrink-0"
                 style={{
-                  marginLeft: index === 0 ? 0 : handOffset,
+                  marginLeft: index === 0 ? 0 : handStyle.offset,
                   zIndex: selected ? 60 : index,
                 }}
                 animate={{
-                  y: selected ? -14 : 0,
+                  y: selected ? -18 : 0,
                   rotate,
-                  scale: selected ? 1.04 : 1,
+                  scale: selected ? 1.05 : 1,
                 }}
                 transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.6 }}
               >
