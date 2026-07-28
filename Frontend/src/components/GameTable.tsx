@@ -264,28 +264,46 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
       if (!row || handCount < 1) return;
 
       const avail = row.clientWidth;
-      const maxH = Math.min(window.innerHeight * 0.28, 96);
-      // Prefer large cards; peek ~38% of each card (≈62% overlap) so they stay tight
-      const peek = 0.36;
-      // cardW from height first (readable), then shrink only if fan won't fit
+      const n = handCount;
+      const maxH = Math.min(window.innerHeight * 0.3, 100);
+      // Easy-tap: show ~55–65% of each card (still slight overlap, not big gaps)
+      const tapPeek = 0.58;
+      const maxPeek = 0.68;
+
       let cardH = maxH;
       let cardW = cardH * (2.25 / 3.75);
-      let step = cardW * peek;
-      let fanW = cardW + Math.max(0, handCount - 1) * step;
-      if (fanW > avail && handCount > 1) {
-        // Shrink just enough to fit — keep peek ratio (still tight, never gapped)
-        cardW = avail / (1 + (handCount - 1) * peek);
+      let step = cardW * tapPeek;
+      let fanW = cardW + Math.max(0, n - 1) * step;
+
+      if (n > 1 && fanW > avail) {
+        // Shrink to fit while keeping tapPeek
+        cardW = avail / (1 + (n - 1) * tapPeek);
         cardH = cardW * (3.75 / 2.25);
-        step = cardW * peek;
+        step = cardW * tapPeek;
+      } else if (n > 1 && fanW < avail * 0.9) {
+        // Spread toward ~92% width, but never open gaps (always overlap)
+        const target = avail * 0.92;
+        step = (target - cardW) / (n - 1);
+        const maxStep = cardW * maxPeek;
+        if (step > maxStep) {
+          // Grow cards so we can fill width with still-overlapping peeks
+          cardW = target / (1 + (n - 1) * maxPeek);
+          cardH = Math.min(maxH, cardW * (3.75 / 2.25));
+          cardW = cardH * (2.25 / 3.75);
+          step = Math.min(cardW * maxPeek, (target - cardW) / (n - 1));
+        }
+        step = Math.max(cardW * 0.45, Math.min(step, cardW - 6));
       }
-      cardW = Math.max(34, cardW);
-      cardH = Math.max(50, cardH);
-      step = cardW * peek;
+
+      cardW = Math.max(36, cardW);
+      cardH = Math.max(54, cardH);
+      step = Math.max(cardW * 0.45, Math.min(step, cardW - 6));
+
       setHandStyle({
         cardW,
         cardH,
-        offset: step - cardW, // always negative → overlapping
-        fontSize: Math.max(9, Math.round(cardW * 0.28)),
+        offset: step - cardW,
+        fontSize: Math.max(10, Math.round(cardW * 0.3)),
       });
     }
     layoutHand();
@@ -548,6 +566,10 @@ export function GameTable({ room, game, onPlay, onPass, onTimeoutCheck }: GameTa
                 style={{
                   marginLeft: index === 0 ? 0 : handStyle.offset,
                   zIndex: selected ? 60 : index,
+                  // Wider finger target without changing visual overlap much
+                  paddingLeft: 2,
+                  paddingRight: 2,
+                  marginRight: -2,
                 }}
                 animate={{
                   y: selected ? -18 : 0,
